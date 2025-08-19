@@ -1,59 +1,65 @@
-const { default: makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion, DisconnectReason } = require('@whiskeysockets/baileys');
-const { Boom } = require('@hapi/boom');
-const qrcode = require('qrcode-terminal');
-const { getPrice } = require('./sheet'); // ← add this line
+require('dotenv/config');
+const { WhatsAppBot } = require('./dist/bot/whatsapp');
+const { SheetsLookup } = require('./dist/data/sheetsLookup');
+const { ExcelLookup } = require('./dist/data/excelLookup');
 
-async function startBot() {
-  const { state, saveCreds } = await useMultiFileAuthState('./auth');
-  const { version } = await fetchLatestBaileysVersion();
+async function createLookupProvider() {
+  const provider = process.env.DATA_PROVIDER || 'excel';
 
-  const sock = makeWASocket({
-    version,
-    auth: state,
-    printQRInTerminal: false
-  });
+  switch (provider) {
+    case 'sheets': {
+      const sheetsId = process.env.SHEETS_ID;
+      const range = process.env.SHEETS_RANGE || 'Sheet1!A:N';
+      const cacheTTL = parseInt(process.env.CACHE_TTL_MINUTES || '5', 10);
 
-  sock.ev.on('connection.update', ({ connection, lastDisconnect, qr }) => {
-    if (qr) {
-      qrcode.generate(qr, { small: true });
-      console.log('📱 Scan the QR code above to connect');
-    }
-
-    if (connection === 'open') {
-      console.log('✅ Connected to WhatsApp');
-    } else if (connection === 'close') {
-      const shouldReconnect = (lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut);
-      console.log('❌ Disconnected, reconnect?', shouldReconnect);
-      if (shouldReconnect) {
-        startBot();
+      if (!sheetsId) {
+        throw new Error('SHEETS_ID environment variable is required when using sheets provider');
       }
+
+      return new SheetsLookup(sheetsId, range, cacheTTL);
     }
-  });
 
-  sock.ev.on('messages.upsert', async ({ messages }) => {
-    const m = messages[0];
-    if (!m.message || m.key.fromMe) return;
-
-    const text = m.message.conversation || m.message.extendedTextMessage?.text || '';
-    const jid = m.key.remoteJid;
-
-    console.log(`📩 Message from ${jid}:`, text);
-
-    const parts = text.trim().split(' ');
-    if (parts.length >= 3) {
-      const [make, model, year] = parts;
-      const price = await getPrice(make, model, year);
-      if (price) {
-        await sock.sendMessage(jid, { text: `🔑 Minimum key price for ${make} ${model} ${year} is: $${price}` });
-      } else {
-        await sock.sendMessage(jid, { text: '❌ No match found. Please use format: make model year' });
-      }
-    } else {
-      await sock.sendMessage(jid, { text: '📌 Invalid format. Send: make model year (example: Ford F150 2016)' });
+    case 'excel': {
+      const filePath = process.env.EXCEL_PATH || './data/pricebook.xlsx';
+      return new ExcelLookup(filePath);
     }
-  });
 
-  sock.ev.on('creds.update', saveCreds);
+    default:
+      throw new Error(`Unknown data provider: ${provider}. Use 'sheets' or 'excel'.`);
+  }
 }
 
-startBot();
+async function main() {
+  try {
+    console.log('🚀 Starting WhatsApp Vehicle Pricing Bot...');
+    console.log(`📊 Data Provider: ${process.env.DATA_PROVIDER || 'excel'}`);
+
+    const lookup = await createLookupProvider();
+    const bot = new WhatsAppBot(lookup);
+
+    console.log('📱 Initializing WhatsApp connection...');
+    console.log('📋 Scan the QR code below with your WhatsApp to connect:');
+    console.log('');
+
+    await bot.start();
+  } catch (error) {
+    console.error('❌ Failed to start bot:', error);
+    process.exit(1);
+  }
+}
+
+// Handle graceful shutdown
+process.on('SIGINT', () => {
+  console.log('👋 Shutting down gracefully...');
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  console.log('👋 Shutting down gracefully...');
+  process.exit(0);
+});
+
+main().catch((error) => {
+  console.error('💥 Unexpected error:', error);
+  process.exit(1);
+});

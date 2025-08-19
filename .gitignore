@@ -15,7 +15,6 @@ secrets/
 !package-lock.json
 
 # Compiled output
-dist/
 build/
 
 # Logs
