@@ -35,7 +35,16 @@ async function main() {
     console.log(`📊 Data Provider: ${process.env.DATA_PROVIDER || 'excel'}`);
 
     const lookup = await createLookupProvider();
-    const bot = new WhatsAppBot(lookup);
+    
+    // Pass Excel file path for price updates (only for Excel provider)
+    const provider = process.env.DATA_PROVIDER || 'excel';
+    let excelFilePath = undefined;
+    if (provider === 'excel') {
+      excelFilePath = process.env.EXCEL_PATH || './keys.xlsx';
+      console.log('🔧 Price update commands enabled for Excel file');
+    }
+    
+    const bot = new WhatsAppBot(lookup, excelFilePath);
 
     console.log('📱 Initializing WhatsApp connection...');
     console.log('📋 Scan the QR code below with your WhatsApp to connect:');

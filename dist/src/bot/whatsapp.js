@@ -42,11 +42,16 @@ const pino_1 = __importDefault(require("pino"));
 const QRCode = __importStar(require("qrcode-terminal"));
 const format_1 = require("../logic/format");
 const intelligentParser_1 = require("../logic/intelligentParser");
+const priceUpdateCommand_1 = require("../commands/priceUpdateCommand");
 class WhatsAppBot {
-    constructor(lookup) {
+    constructor(lookup, excelFilePath) {
         this.vehicleData = [];
         this.lookup = lookup;
         this.loadVehicleData();
+        // Initialize price update command if Excel file path is provided
+        if (excelFilePath) {
+            this.priceUpdateCommand = new priceUpdateCommand_1.PriceUpdateCommand(lookup, excelFilePath);
+        }
     }
     async loadVehicleData() {
         try {
@@ -119,7 +124,7 @@ class WhatsAppBot {
             }
             console.log(`📩 Received: "${messageText}" from ${message.key.remoteJid}`);
             try {
-                const response = await this.processMessage(messageText);
+                const response = await this.processMessage(messageText, message.key.remoteJid);
                 await sock.sendMessage(message.key.remoteJid, { text: response });
                 console.log(`📤 Sent: "${response}"`);
             }
@@ -131,11 +136,22 @@ class WhatsAppBot {
             }
         }
     }
-    async processMessage(text) {
+    async processMessage(text, userId) {
         console.log(`🔍 Processing: "${text}"`);
+        // Handle price update commands first (if price update command is available)
+        if (this.priceUpdateCommand && userId) {
+            if (this.priceUpdateCommand.isCommand(text)) {
+                console.log(`🔧 Processing price update command`);
+                return this.priceUpdateCommand.processCommand(userId, text);
+            }
+        }
         // Skip greetings
         if (text.toLowerCase().match(/^(hi|hello|hey|test)$/i)) {
-            return 'Hello! Send me vehicle info like "Toyota Corolla 2015" to get pricing.';
+            const greeting = 'Hello! Send me vehicle info like "Toyota Corolla 2015" to get pricing.';
+            if (this.priceUpdateCommand) {
+                return greeting + '\n\nType `help` for price update commands.';
+            }
+            return greeting;
         }
         // Try intelligent parsing first (handles any order)
         if (this.vehicleData.length > 0) {

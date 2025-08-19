@@ -15,14 +15,21 @@ import {
   formatInvalidInputMessage,
 } from '../logic/format';
 import { smartParseVehicle, SmartParseResult } from '../logic/intelligentParser';
+import { PriceUpdateCommand } from '../commands/priceUpdateCommand';
 
 export class WhatsAppBot {
   private lookup: VehicleLookup;
   private vehicleData: VehicleData[] = [];
+  private priceUpdateCommand?: PriceUpdateCommand;
 
-  constructor(lookup: VehicleLookup) {
+  constructor(lookup: VehicleLookup, excelFilePath?: string) {
     this.lookup = lookup;
     this.loadVehicleData();
+    
+    // Initialize price update command if Excel file path is provided
+    if (excelFilePath) {
+      this.priceUpdateCommand = new PriceUpdateCommand(lookup, excelFilePath);
+    }
   }
 
   private async loadVehicleData(): Promise<void> {
@@ -116,7 +123,7 @@ export class WhatsAppBot {
       console.log(`📩 Received: "${messageText}" from ${message.key.remoteJid}`);
 
       try {
-        const response = await this.processMessage(messageText);
+        const response = await this.processMessage(messageText, message.key.remoteJid);
         await sock.sendMessage(message.key.remoteJid, { text: response });
         console.log(`📤 Sent: "${response}"`);
       } catch (error) {
@@ -128,12 +135,24 @@ export class WhatsAppBot {
     }
   }
 
-  private async processMessage(text: string): Promise<string> {
+  private async processMessage(text: string, userId?: string): Promise<string> {
     console.log(`🔍 Processing: "${text}"`);
+    
+    // Handle price update commands first (if price update command is available)
+    if (this.priceUpdateCommand && userId) {
+      if (this.priceUpdateCommand.isCommand(text)) {
+        console.log(`🔧 Processing price update command`);
+        return this.priceUpdateCommand.processCommand(userId, text);
+      }
+    }
     
     // Skip greetings
     if (text.toLowerCase().match(/^(hi|hello|hey|test)$/i)) {
-      return 'Hello! Send me vehicle info like "Toyota Corolla 2015" to get pricing.';
+      const greeting = 'Hello! Send me vehicle info like "Toyota Corolla 2015" to get pricing.';
+      if (this.priceUpdateCommand) {
+        return greeting + '\n\nType `help` for price update commands.';
+      }
+      return greeting;
     }
     
     // Try intelligent parsing first (handles any order)

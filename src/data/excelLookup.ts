@@ -19,6 +19,12 @@ export class ExcelLookup implements VehicleLookup {
     return this.getData();
   }
 
+  // Clear cached data to force reload (useful after updates)
+  clearCache(): void {
+    console.log('🔄 Clearing Excel data cache');
+    this.data = null;
+  }
+
   private async getData(): Promise<VehicleData[]> {
     if (this.data) {
       console.log(`📊 Using cached data: ${this.data.length} records`);
@@ -57,10 +63,7 @@ export class ExcelLookup implements VehicleLookup {
         ignitionMinPrice: String(row[13] || '').trim(),
       }));
 
-      console.log(`✅ Loaded ${this.data.length} vehicle records:`);
-      this.data.forEach(record => {
-        console.log(`   ${record.yearRange} ${record.make} ${record.model} - ${record.key}`);
-      });
+      console.log(`✅ Loaded ${this.data.length} vehicle records`);
 
       return this.data;
     } catch (error) {
