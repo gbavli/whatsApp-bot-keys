@@ -27,12 +27,16 @@ export class WhatsAppBot {
 
   private async loadVehicleData(): Promise<void> {
     try {
+      console.log('🔄 Loading vehicle data for intelligent parsing...');
       // Load all vehicle data for intelligent parsing
       if ('getAllVehicles' in this.lookup) {
         this.vehicleData = await (this.lookup as any).getAllVehicles();
+        console.log(`✅ Loaded ${this.vehicleData.length} vehicles for intelligent parsing`);
+      } else {
+        console.log('⚠️ Lookup provider does not support getAllVehicles');
       }
     } catch (error) {
-      console.error('Failed to load vehicle data for intelligent parsing:', error);
+      console.error('❌ Failed to load vehicle data for intelligent parsing:', error);
     }
   }
 
@@ -132,21 +136,48 @@ export class WhatsAppBot {
       return 'Hello! Send me vehicle info like "Toyota Corolla 2015" to get pricing.';
     }
     
-    // Fallback to simple parsing
-    const parsed = parseUserInput(text);
-    console.log(`📋 Parsed:`, parsed);
-    
-    if (!parsed) {
-      return formatInvalidInputMessage();
+    // Try intelligent parsing first (handles any order)
+    if (this.vehicleData.length > 0) {
+      console.log(`🧠 Trying intelligent parsing with ${this.vehicleData.length} vehicle records`);
+      const smartResults = smartParseVehicle(text, this.vehicleData);
+      
+      if (smartResults.length > 0) {
+        console.log(`🎯 Smart parser found ${smartResults.length} potential matches:`);
+        smartResults.forEach((match, i) => {
+          console.log(`   ${i + 1}. ${match.make} ${match.model} ${match.year} (confidence: ${match.confidence})`);
+        });
+        
+        // Try the best match first
+        for (const match of smartResults) {
+          console.log(`🔎 Trying smart match: ${match.make} ${match.model} ${match.year}`);
+          const result = await this.lookup.find(match.make, match.model, match.year);
+          if (result) {
+            console.log(`✅ Smart parser success!`);
+            return formatVehicleResult(result);
+          }
+        }
+        console.log(`❌ Smart parser matches found but no data results`);
+      } else {
+        console.log(`❌ Smart parser found no matches`);
+      }
     }
     
-    const { make, model, year } = parsed;
-    console.log(`🔎 Looking for: ${make} ${model} ${year}`);
-    const result = await this.lookup.find(make, model, year);
-    console.log(`📊 Result:`, result);
+    // Fallback to simple parsing (Make Model Year only)
+    console.log(`📝 Trying simple parsing...`);
+    const parsed = parseUserInput(text);
+    console.log(`📋 Simple parsed:`, parsed);
     
-    if (result) {
-      return formatVehicleResult(result);
+    if (parsed) {
+      const { make, model, year } = parsed;
+      console.log(`🔎 Looking for: ${make} ${model} ${year}`);
+      const result = await this.lookup.find(make, model, year);
+      console.log(`📊 Result:`, result);
+      
+      if (result) {
+        return formatVehicleResult(result);
+      }
+    } else {
+      return formatInvalidInputMessage();
     }
 
     console.log(`❌ No match found for: "${text}"`);

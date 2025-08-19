@@ -17,7 +17,7 @@ async function createLookupProvider() {
             return new sheetsLookup_1.SheetsLookup(sheetsId, range, cacheTTL);
         }
         case 'excel': {
-            const filePath = process.env.EXCEL_PATH || './data/pricebook.xlsx';
+            const filePath = process.env.EXCEL_PATH || './keys.xlsx';
             return new excelLookup_1.ExcelLookup(filePath);
         }
         default:
