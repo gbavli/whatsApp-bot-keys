@@ -29,7 +29,7 @@
     "eslint-plugin-prettier": "^5.5.4",
     "prettier": "^3.6.2",
     "ts-node": "^10.9.2",
-    "vitest": "^3.2.4"
+    "vitest": "^2.0.0"
   },
   "dependencies": {
     "@whiskeysockets/baileys": "^6.7.18",
