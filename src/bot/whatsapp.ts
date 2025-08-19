@@ -58,8 +58,12 @@ export class WhatsAppBot {
     const { connection, lastDisconnect, qr } = update;
 
     if (qr) {
+      console.log('🔳 QR CODE FOR WHATSAPP - SCAN WITH YOUR PHONE:');
+      console.log('▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼');
       QRCode.generate(qr, { small: false });
-      console.log('📱 Scan the QR code above to connect');
+      console.log('▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲');
+      console.log('📱 Open WhatsApp → Settings → Linked Devices → Link a Device → Scan above');
+      console.log('');
     }
 
     if (connection === 'close') {
