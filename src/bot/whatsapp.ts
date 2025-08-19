@@ -127,19 +127,26 @@ export class WhatsAppBot {
   private async processMessage(text: string): Promise<string> {
     console.log(`🔍 Processing: "${text}"`);
     
+    // Skip greetings
+    if (text.toLowerCase().match(/^(hi|hello|hey|test)$/i)) {
+      return 'Hello! Send me vehicle info like "Toyota Corolla 2015" to get pricing.';
+    }
+    
     // Fallback to simple parsing
     const parsed = parseUserInput(text);
     console.log(`📋 Parsed:`, parsed);
     
-    if (parsed) {
-      const { make, model, year } = parsed;
-      console.log(`🔎 Looking for: ${make} ${model} ${year}`);
-      const result = await this.lookup.find(make, model, year);
-      console.log(`📊 Result:`, result);
-      
-      if (result) {
-        return formatVehicleResult(result);
-      }
+    if (!parsed) {
+      return formatInvalidInputMessage();
+    }
+    
+    const { make, model, year } = parsed;
+    console.log(`🔎 Looking for: ${make} ${model} ${year}`);
+    const result = await this.lookup.find(make, model, year);
+    console.log(`📊 Result:`, result);
+    
+    if (result) {
+      return formatVehicleResult(result);
     }
 
     console.log(`❌ No match found for: "${text}"`);
