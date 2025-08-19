@@ -59,6 +59,7 @@ class WhatsAppBot {
         const { state, saveCreds } = await (0, baileys_1.useMultiFileAuthState)('./auth');
         const sock = (0, baileys_1.default)({
             auth: state,
+            printQRInTerminal: false, // Disable deprecated QR option
         });
         sock.ev.on('connection.update', (update) => this.handleConnectionUpdate(update, sock));
         sock.ev.on('creds.update', saveCreds);

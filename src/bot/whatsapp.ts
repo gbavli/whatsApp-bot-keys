@@ -40,6 +40,7 @@ export class WhatsAppBot {
 
     const sock = makeWASocket({
       auth: state,
+      printQRInTerminal: false, // Disable deprecated QR option
     });
 
     sock.ev.on('connection.update', (update) => this.handleConnectionUpdate(update, sock));
