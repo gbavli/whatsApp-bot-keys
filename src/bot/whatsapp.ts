@@ -125,45 +125,24 @@ export class WhatsAppBot {
   }
 
   private async processMessage(text: string): Promise<string> {
-    // Try intelligent parsing first
-    if (this.vehicleData.length > 0) {
-      const smartResults = smartParseVehicle(text, this.vehicleData);
-      
-      if (smartResults.length > 0) {
-        // Try the best match first
-        const bestMatch = smartResults[0];
-        if (bestMatch) {
-          const result = await this.lookup.find(bestMatch.make, bestMatch.model, bestMatch.year);
-          
-          if (result) {
-            return formatVehicleResult(result);
-          }
-        }
-        
-        // If best match didn't work, try other matches
-        for (let i = 1; i < smartResults.length; i++) {
-          const match = smartResults[i];
-          if (match) {
-            const result = await this.lookup.find(match.make, match.model, match.year);
-            if (result) {
-              return formatVehicleResult(result);
-            }
-          }
-        }
-      }
-    }
+    console.log(`🔍 Processing: "${text}"`);
     
     // Fallback to simple parsing
     const parsed = parseUserInput(text);
+    console.log(`📋 Parsed:`, parsed);
+    
     if (parsed) {
       const { make, model, year } = parsed;
+      console.log(`🔎 Looking for: ${make} ${model} ${year}`);
       const result = await this.lookup.find(make, model, year);
+      console.log(`📊 Result:`, result);
       
       if (result) {
         return formatVehicleResult(result);
       }
     }
 
+    console.log(`❌ No match found for: "${text}"`);
     return formatNotFoundMessage();
   }
 }

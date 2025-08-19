@@ -21,10 +21,12 @@ export class ExcelLookup implements VehicleLookup {
 
   private async getData(): Promise<VehicleData[]> {
     if (this.data) {
+      console.log(`📊 Using cached data: ${this.data.length} records`);
       return this.data;
     }
 
     try {
+      console.log(`📁 Reading Excel file: ${this.filePath}`);
       const workbook = XLSX.readFile(this.filePath);
       const sheetName = workbook.SheetNames[0];
       
@@ -38,6 +40,7 @@ export class ExcelLookup implements VehicleLookup {
       }
       const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as string[][];
 
+      console.log(`📋 Raw data rows: ${rawData.length}`);
       if (rawData.length < 2) {
         throw new Error('Excel file must contain at least a header row and one data row');
       }
@@ -54,9 +57,14 @@ export class ExcelLookup implements VehicleLookup {
         ignitionMinPrice: String(row[13] || '').trim(),
       }));
 
+      console.log(`✅ Loaded ${this.data.length} vehicle records:`);
+      this.data.forEach(record => {
+        console.log(`   ${record.yearRange} ${record.make} ${record.model} - ${record.key}`);
+      });
+
       return this.data;
     } catch (error) {
-      console.error(`Error reading Excel file ${this.filePath}:`, error);
+      console.error(`❌ Error reading Excel file ${this.filePath}:`, error);
       throw error;
     }
   }

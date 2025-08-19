@@ -41,7 +41,6 @@ const baileys_1 = __importStar(require("@whiskeysockets/baileys"));
 const pino_1 = __importDefault(require("pino"));
 const QRCode = __importStar(require("qrcode-terminal"));
 const format_1 = require("../logic/format");
-const intelligentParser_1 = require("../logic/intelligentParser");
 class WhatsAppBot {
     constructor(lookup) {
         this.vehicleData = [];
@@ -127,39 +126,20 @@ class WhatsAppBot {
         }
     }
     async processMessage(text) {
-        // Try intelligent parsing first
-        if (this.vehicleData.length > 0) {
-            const smartResults = (0, intelligentParser_1.smartParseVehicle)(text, this.vehicleData);
-            if (smartResults.length > 0) {
-                // Try the best match first
-                const bestMatch = smartResults[0];
-                if (bestMatch) {
-                    const result = await this.lookup.find(bestMatch.make, bestMatch.model, bestMatch.year);
-                    if (result) {
-                        return (0, format_1.formatVehicleResult)(result);
-                    }
-                }
-                // If best match didn't work, try other matches
-                for (let i = 1; i < smartResults.length; i++) {
-                    const match = smartResults[i];
-                    if (match) {
-                        const result = await this.lookup.find(match.make, match.model, match.year);
-                        if (result) {
-                            return (0, format_1.formatVehicleResult)(result);
-                        }
-                    }
-                }
-            }
-        }
+        console.log(`🔍 Processing: "${text}"`);
         // Fallback to simple parsing
         const parsed = (0, format_1.parseUserInput)(text);
+        console.log(`📋 Parsed:`, parsed);
         if (parsed) {
             const { make, model, year } = parsed;
+            console.log(`🔎 Looking for: ${make} ${model} ${year}`);
             const result = await this.lookup.find(make, model, year);
+            console.log(`📊 Result:`, result);
             if (result) {
                 return (0, format_1.formatVehicleResult)(result);
             }
         }
+        console.log(`❌ No match found for: "${text}"`);
         return (0, format_1.formatNotFoundMessage)();
     }
 }
