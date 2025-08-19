@@ -89,6 +89,52 @@ function findBestModel(input: string, availableModels: string[]): { model: strin
   return bestMatch;
 }
 
+// Extract potential vehicle information from complex text (like locksmith tickets)
+function extractVehicleFromText(input: string): string[] {
+  // Look for year make model patterns in the text
+  const patterns = [
+    // Pattern: "2008 Ford F250 - Regular turn key"
+    /(\d{4})\s+([a-zA-Z]+)\s+([a-zA-Z0-9\-\s]+?)(?:\s*[-–]\s*|\s*\n|\s*$)/g,
+    // Pattern: "Ford F250 2008"  
+    /([a-zA-Z]+)\s+([a-zA-Z0-9\-\s]+?)\s+(\d{4})/g,
+    // Pattern: "2008 Ford F-250" (with dash)
+    /(\d{4})\s+([a-zA-Z]+)\s+([a-zA-Z0-9\-]+)/g,
+    // Pattern: lines containing year and text
+    /^.*(\d{4}).*([a-zA-Z]+).*([a-zA-Z0-9\-]+).*$/gm
+  ];
+  
+  const vehicleStrings: string[] = [];
+  
+  for (const pattern of patterns) {
+    let match;
+    while ((match = pattern.exec(input)) !== null) {
+      if (match[1] && match[2] && match[3]) {
+        // Check if first capture group is a year
+        const year = parseInt(match[1], 10);
+        if (year >= 1980 && year <= 2030) {
+          vehicleStrings.push(`${match[1]} ${match[2]} ${match[3]}`.trim());
+        } else {
+          // Try other combinations
+          const possibleYear1 = parseInt(match[2], 10);
+          const possibleYear2 = parseInt(match[3], 10);
+          if (possibleYear1 >= 1980 && possibleYear1 <= 2030) {
+            vehicleStrings.push(`${match[2]} ${match[1]} ${match[3]}`.trim());
+          } else if (possibleYear2 >= 1980 && possibleYear2 <= 2030) {
+            vehicleStrings.push(`${match[3]} ${match[1]} ${match[2]}`.trim());
+          }
+        }
+      }
+    }
+  }
+  
+  // If no patterns match, return the original input cleaned
+  if (vehicleStrings.length === 0) {
+    vehicleStrings.push(input);
+  }
+  
+  return vehicleStrings;
+}
+
 // Clean and normalize input text
 function cleanInput(input: string): string[] {
   return input
@@ -106,9 +152,16 @@ function cleanInput(input: string): string[] {
     .replace(/\bf[-\s]?150\b/g, 'f150')
     .replace(/\bf[-\s]?250\b/g, 'f250')
     .replace(/\bf[-\s]?350\b/g, 'f350')
+    .replace(/\bf[-\s]?450\b/g, 'f450')
+    .replace(/\bf[-\s]?550\b/g, 'f550')
     .replace(/\bc[-\s]?class\b/g, 'c-class')
     .replace(/\be[-\s]?class\b/g, 'e-class')
     .replace(/\bs[-\s]?class\b/g, 's-class')
+    .replace(/\bm[-\s]?class\b/g, 'm-class')
+    .replace(/\bg[-\s]?class\b/g, 'g-class')
+    // Handle Ram/Dodge
+    .replace(/\bram\s+(\d{4})\b/g, 'ram-$1')
+    .replace(/\bdodge\s+ram\b/g, 'ram')
     // Remove extra punctuation and normalize
     .replace(/['"`,;:!?(){}[\]]/g, ' ') // Remove quotes, punctuation
     .replace(/[-_+=|\\\/]/g, ' ') // Replace separators with spaces
@@ -147,9 +200,9 @@ function extractYear(words: string[]): { year: number; remainingWords: string[] 
   return null;
 }
 
-// Main intelligent parsing function
-export function smartParseVehicle(input: string, vehicleData: VehicleData[]): SmartParseResult[] {
-  const words = cleanInput(input);
+// Process a single vehicle string
+function processVehicleString(vehicleString: string, vehicleData: VehicleData[]): SmartParseResult[] {
+  const words = cleanInput(vehicleString);
   
   if (words.length < 2) {
     return [];
@@ -241,8 +294,27 @@ export function smartParseVehicle(input: string, vehicleData: VehicleData[]): Sm
     }
   }
   
+  return results;
+}
+
+// Main intelligent parsing function
+export function smartParseVehicle(input: string, vehicleData: VehicleData[]): SmartParseResult[] {
+  console.log(`🔍 Smart parsing input: "${input}"`);
+  
+  // First, extract potential vehicle strings from the complex text
+  const vehicleStrings = extractVehicleFromText(input);
+  console.log(`📝 Extracted vehicle strings:`, vehicleStrings);
+  
+  const allResults: SmartParseResult[] = [];
+  
+  // Process each potential vehicle string
+  for (const vehicleString of vehicleStrings) {
+    const results = processVehicleString(vehicleString, vehicleData);
+    allResults.push(...results);
+  }
+  
   // Sort by confidence and remove duplicates
-  const uniqueResults = results
+  const uniqueResults = allResults
     .sort((a, b) => b.confidence - a.confidence)
     .filter((result, index, arr) => {
       // Remove duplicates
@@ -253,5 +325,6 @@ export function smartParseVehicle(input: string, vehicleData: VehicleData[]): Sm
       );
     });
   
+  console.log(`🎯 Smart parser final results:`, uniqueResults.slice(0, 3));
   return uniqueResults.slice(0, 3); // Return top 3 matches
 }
