@@ -58,11 +58,21 @@ export class WhatsAppBot {
     const { connection, lastDisconnect, qr } = update;
 
     if (qr) {
-      console.log('🔳 QR CODE FOR WHATSAPP - SCAN WITH YOUR PHONE:');
-      console.log('▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼');
+      console.log('🔳 QR CODE FOR WHATSAPP:');
       QRCode.generate(qr, { small: false });
-      console.log('▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲');
-      console.log('📱 Open WhatsApp → Settings → Linked Devices → Link a Device → Scan above');
+      
+      // Also save QR as URL for easier access
+      console.log('📱 QR Code Text (copy this to any QR generator website):');
+      console.log('─'.repeat(60));
+      console.log(qr);
+      console.log('─'.repeat(60));
+      console.log('');
+      console.log('💡 ALTERNATIVE METHODS TO SCAN:');
+      console.log('1. Copy the text above to https://qr-code-generator.com');
+      console.log('2. Generate QR code from that text');
+      console.log('3. Scan the generated QR with WhatsApp');
+      console.log('');
+      console.log('OR visit: https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(qr));
       console.log('');
     }
 
