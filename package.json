@@ -8,8 +8,6 @@
   },
   "scripts": {
     "dev": "ts-node src/index.ts",
-    "build": "node --max-old-space-size=1024 ./node_modules/.bin/tsc -p tsconfig.json",
-    "heroku-postbuild": "npm run build",
     "start": "ts-node src/index.ts",
     "test": "vitest run",
     "test:watch": "vitest",
