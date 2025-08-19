@@ -21,7 +21,7 @@ async function createLookupProvider(): Promise<VehicleLookup> {
     }
 
     case 'excel': {
-      const filePath = process.env.EXCEL_PATH || './data/pricebook.xlsx';
+      const filePath = process.env.EXCEL_PATH || './keys.xlsx';
       return new ExcelLookup(filePath);
     }
 
