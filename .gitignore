@@ -11,6 +11,8 @@ npm-debug.log*
 auth/
 secrets/
 *.json
+!package.json
+!package-lock.json
 
 # Compiled output
 dist/
