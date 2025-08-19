@@ -1,5 +1,0 @@
-[phases.build]
-cmds = ['rm -rf node_modules/.cache || true', 'npm ci --no-cache', 'npm run build']
-
-[phases.start]
-cmd = 'npm start'
