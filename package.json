@@ -10,7 +10,7 @@
     "dev": "ts-node src/index.ts",
     "build": "node --max-old-space-size=1024 ./node_modules/.bin/tsc -p tsconfig.json",
     "heroku-postbuild": "npm run build",
-    "start": "npm run build && node dist/index.js",
+    "start": "ts-node src/index.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",
@@ -28,7 +28,6 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
     "prettier": "^3.6.2",
-    "ts-node": "^10.9.2",
     "vitest": "^2.0.0"
   },
   "dependencies": {
@@ -38,6 +37,7 @@
     "google-auth-library": "^10.2.1",
     "googleapis": "^156.0.0",
     "qrcode-terminal": "^0.12.0",
+    "ts-node": "^10.9.2",
     "typescript": "^5.9.2",
     "xlsx": "^0.18.5"
   }
