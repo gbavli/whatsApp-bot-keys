@@ -1,7 +1,7 @@
 require('dotenv/config');
-const { WhatsAppBot } = require('./dist/bot/whatsapp');
-const { SheetsLookup } = require('./dist/data/sheetsLookup');
-const { ExcelLookup } = require('./dist/data/excelLookup');
+const { WhatsAppBot } = require('./dist/src/bot/whatsapp');
+const { SheetsLookup } = require('./dist/src/data/sheetsLookup');
+const { ExcelLookup } = require('./dist/src/data/excelLookup');
 
 async function createLookupProvider() {
   const provider = process.env.DATA_PROVIDER || 'excel';
