@@ -32,9 +32,13 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.WhatsAppBot = void 0;
 const baileys_1 = __importStar(require("@whiskeysockets/baileys"));
+const pino_1 = __importDefault(require("pino"));
 const QRCode = __importStar(require("qrcode-terminal"));
 const format_1 = require("../logic/format");
 const intelligentParser_1 = require("../logic/intelligentParser");
@@ -59,7 +63,8 @@ class WhatsAppBot {
         const { state, saveCreds } = await (0, baileys_1.useMultiFileAuthState)('./auth');
         const sock = (0, baileys_1.default)({
             auth: state,
-            printQRInTerminal: false, // Disable deprecated QR option
+            logger: (0, pino_1.default)({ level: 'silent' }), // Silent logger using Pino
+            printQRInTerminal: false,
         });
         sock.ev.on('connection.update', (update) => this.handleConnectionUpdate(update, sock));
         sock.ev.on('creds.update', saveCreds);

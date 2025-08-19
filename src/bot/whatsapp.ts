@@ -4,6 +4,7 @@ import makeWASocket, {
   useMultiFileAuthState,
   WAMessage,
 } from '@whiskeysockets/baileys';
+import P from 'pino';
 import { Boom } from '@hapi/boom';
 import * as QRCode from 'qrcode-terminal';
 import { VehicleLookup, VehicleData } from '../data/vehicleLookup';
@@ -40,7 +41,8 @@ export class WhatsAppBot {
 
     const sock = makeWASocket({
       auth: state,
-      printQRInTerminal: false, // Disable deprecated QR option
+      logger: P({ level: 'silent' }), // Silent logger using Pino
+      printQRInTerminal: false,
     });
 
     sock.ev.on('connection.update', (update) => this.handleConnectionUpdate(update, sock));
