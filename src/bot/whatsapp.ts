@@ -58,7 +58,7 @@ export class WhatsAppBot {
     const { connection, lastDisconnect, qr } = update;
 
     if (qr) {
-      QRCode.generate(qr, { small: true });
+      QRCode.generate(qr, { small: false });
       console.log('📱 Scan the QR code above to connect');
     }
 
