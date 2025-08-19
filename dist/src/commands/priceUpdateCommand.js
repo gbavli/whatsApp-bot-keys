@@ -151,11 +151,31 @@ Please send the vehicle information:
             let rowIndex = -1;
             if ('getAllVehicles' in this.lookup) {
                 const vehicleData = await this.lookup.getAllVehicles();
-                const recordIndex = vehicleData.findIndex(v => v.make.toLowerCase() === make.toLowerCase() &&
-                    v.model.toLowerCase() === model.toLowerCase());
-                if (recordIndex >= 0) {
-                    vehicleRecord = vehicleData[recordIndex] || null;
-                    rowIndex = recordIndex + 2; // +2 for header row and 0-based index
+                // Find ALL potential matches for make and model
+                const potentialMatches = vehicleData.map((v, index) => ({ vehicle: v, index }))
+                    .filter(({ vehicle }) => vehicle.make.toLowerCase() === make.toLowerCase() &&
+                    vehicle.model.toLowerCase() === model.toLowerCase());
+                // Find the record that matches the specific year (using same logic as matchVehicle)
+                const matchingRecord = potentialMatches.find(({ vehicle }) => {
+                    const yearRange = vehicle.yearRange;
+                    if (!yearRange)
+                        return false;
+                    // Handle single year
+                    if (/^\d{4}$/.test(yearRange.trim())) {
+                        return parseInt(yearRange.trim(), 10) === year;
+                    }
+                    // Handle year range
+                    const rangeMatch = yearRange.match(/^(\d{4})\s*[-–]\s*(\d{4})$/);
+                    if (rangeMatch && rangeMatch[1] && rangeMatch[2]) {
+                        const startYear = parseInt(rangeMatch[1], 10);
+                        const endYear = parseInt(rangeMatch[2], 10);
+                        return year >= startYear && year <= endYear;
+                    }
+                    return false;
+                });
+                if (matchingRecord) {
+                    vehicleRecord = matchingRecord.vehicle;
+                    rowIndex = matchingRecord.index + 2; // +2 for header row and 0-based index
                 }
             }
             if (!vehicleRecord) {
