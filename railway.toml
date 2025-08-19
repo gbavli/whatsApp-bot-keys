@@ -5,6 +5,8 @@ builder = "nixpacks"
 variables = { NODE_VERSION = "20" }
 
 [deploy]
+buildCommand = "npm install && npm run build"
+startCommand = "npm start"
 numReplicas = 1
 sleepApplication = false
 restartPolicyType = "always"
