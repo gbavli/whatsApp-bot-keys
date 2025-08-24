@@ -49,14 +49,32 @@ class WhatsAppBot {
     constructor(lookup, excelFilePath) {
         this.vehicleData = [];
         this.lookup = lookup;
-        this.enhancedVehicleCommand = new enhancedVehicleCommand_1.EnhancedVehicleCommand(lookup);
+        try {
+            this.enhancedVehicleCommand = new enhancedVehicleCommand_1.EnhancedVehicleCommand(lookup);
+            console.log('✅ Enhanced vehicle command initialized');
+        }
+        catch (error) {
+            console.error('❌ Failed to initialize enhanced vehicle command:', error);
+            // Create a minimal fallback
+            this.enhancedVehicleCommand = {
+                processMessage: async () => null,
+                cleanupOldSessions: () => { }
+            };
+        }
         this.loadVehicleData();
         // Initialize appropriate price update command based on lookup type
-        if (lookup instanceof postgresLookup_1.PostgresLookup) {
-            this.priceUpdateCommand = new postgresUpdateCommand_1.PostgresUpdateCommand(lookup);
+        try {
+            if (lookup instanceof postgresLookup_1.PostgresLookup) {
+                this.priceUpdateCommand = new postgresUpdateCommand_1.PostgresUpdateCommand(lookup);
+                console.log('✅ PostgreSQL price update command initialized');
+            }
+            else if (excelFilePath) {
+                this.priceUpdateCommand = new priceUpdateCommand_1.PriceUpdateCommand(lookup, excelFilePath);
+                console.log('✅ Excel price update command initialized');
+            }
         }
-        else if (excelFilePath) {
-            this.priceUpdateCommand = new priceUpdateCommand_1.PriceUpdateCommand(lookup, excelFilePath);
+        catch (error) {
+            console.error('❌ Failed to initialize price update command:', error);
         }
     }
     async loadVehicleData() {

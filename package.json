@@ -8,7 +8,8 @@
   },
   "scripts": {
     "dev": "ts-node src/index.ts",
-    "start": "node index.js",
+    "start": "node index-minimal.js",
+    "start-full": "node index.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",
