@@ -11,14 +11,22 @@ export class PostgresLookup implements VehicleLookup {
     this.client = new Client(
       process.env.DATABASE_URL ? {
         connectionString: process.env.DATABASE_URL,
-        ssl: { rejectUnauthorized: false }
+        ssl: { rejectUnauthorized: false },
+        // Add connection optimizations
+        connectionTimeoutMillis: 10000, // 10 second timeout
+        query_timeout: 30000, // 30 second query timeout
+        statement_timeout: 30000, // 30 second statement timeout
       } : {
         host: process.env.PGHOST,
         port: parseInt(process.env.PGPORT || '5432'),
         user: process.env.PGUSER,
         password: process.env.PGPASSWORD,
         database: process.env.PGDATABASE,
-        ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+        ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+        // Add connection optimizations  
+        connectionTimeoutMillis: 10000,
+        query_timeout: 30000,
+        statement_timeout: 30000,
       }
     );
   }
@@ -55,24 +63,18 @@ export class PostgresLookup implements VehicleLookup {
       await this.connect();
       
       console.log('📁 Loading vehicle data from PostgreSQL...');
+      const startTime = Date.now();
       
+      // Optimized query - only select necessary columns, no ORDER BY for speed
       const result = await this.client.query(`
         SELECT 
-          id,
-          year_range,
-          make,
-          model,
-          key_type,
-          key_min_price,
-          remote_min_price,
-          p2s_min_price,
-          ignition_min_price
+          id, year_range, make, model, key_type,
+          key_min_price, remote_min_price, p2s_min_price, ignition_min_price
         FROM vehicles
-        ORDER BY make, model, year_range
       `);
 
       this.data = result.rows.map(row => ({
-        id: row.id, // Add database ID for updates
+        id: row.id,
         yearRange: row.year_range || '',
         make: row.make || '',
         model: row.model || '',
@@ -83,7 +85,8 @@ export class PostgresLookup implements VehicleLookup {
         ignitionMinPrice: row.ignition_min_price || '',
       }));
 
-      console.log(`✅ Loaded ${this.data.length} vehicle records from PostgreSQL`);
+      const loadTime = Date.now() - startTime;
+      console.log(`⚡ Loaded ${this.data.length} vehicle records in ${loadTime}ms`);
       return this.data;
 
     } catch (error) {
