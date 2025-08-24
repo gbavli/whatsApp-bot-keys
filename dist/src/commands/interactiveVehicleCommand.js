@@ -58,11 +58,15 @@ class InteractiveVehicleCommand {
         }
         // Handle model selection
         if (session.state === 'selecting_model') {
-            return this.handleModelSelection(userId, trimmedText);
+            return await this.handleModelSelection(userId, trimmedText);
         }
         // Handle year selection  
         if (session.state === 'selecting_year') {
             return await this.handleYearSelection(userId, trimmedText);
+        }
+        // Handle vehicle selection for pricing
+        if (session.state === 'selecting_vehicle_for_pricing') {
+            return this.handleVehicleSelectionForPricing(userId, trimmedText);
         }
         // Handle price update trigger (9)
         if (trimmedText === '9' && session.vehicleData) {
@@ -97,11 +101,11 @@ class InteractiveVehicleCommand {
             make: make,
             models: makeModels
         });
-        let message = `🚗 **${make.toUpperCase()} MODELS:**\n\n`;
+        let message = `${make.toUpperCase()} MODELS:\n\n`;
         makeModels.forEach((model, index) => {
             message += `${index + 1}. ${model}\n`;
         });
-        message += `\n📝 Reply with the **number** or **model name**`;
+        message += `\nReply with the number or model name`;
         return message;
     }
     async handleMakeModelSearch(userId, make, model) {
@@ -111,7 +115,10 @@ class InteractiveVehicleCommand {
             return `No year ranges found for ${make} ${model}.`;
         }
         if (yearRanges.length === 1) {
-            return `📅 **${make} ${model}** available for: **${yearRanges[0]}**\n\nSend a specific year from this range to get pricing.`;
+            const range = yearRanges[0];
+            if (range) {
+                return await this.showVehiclesForRange(make, model, range, userId);
+            }
         }
         // Store session for year selection
         this.updateSession(userId, {
@@ -120,11 +127,11 @@ class InteractiveVehicleCommand {
             model: model,
             yearRanges: yearRanges
         });
-        let message = `📅 **${make} ${model}** - SELECT YEAR RANGE:\n\n`;
+        let message = `${make} ${model} - SELECT YEAR RANGE:\n\n`;
         yearRanges.forEach((yearRange, index) => {
             message += `${index + 1}. ${yearRange}\n`;
         });
-        message += `\n📝 Reply with the **number** or **specific year**`;
+        message += `\nReply with the number or specific year`;
         return message;
     }
     async handleFullSearch(userId, make, model, year) {
@@ -157,7 +164,7 @@ class InteractiveVehicleCommand {
             return `No matching record found for ${make} ${model} ${year}.`;
         }
     }
-    handleModelSelection(userId, selection) {
+    async handleModelSelection(userId, selection) {
         const session = this.getSession(userId);
         if (!session.models || !session.make) {
             return 'Session expired. Please start over.';
@@ -184,7 +191,10 @@ class InteractiveVehicleCommand {
         }
         if (yearRanges.length === 1) {
             this.updateSession(userId, { state: 'idle' });
-            return `📅 **${make} ${selectedModel}** available for: **${yearRanges[0]}**\n\nSend a specific year from this range to get pricing.`;
+            const range = yearRanges[0];
+            if (range) {
+                return await this.showVehiclesForRange(make, selectedModel, range, userId);
+            }
         }
         // Multiple year ranges - let user select
         this.updateSession(userId, {
@@ -192,11 +202,11 @@ class InteractiveVehicleCommand {
             model: selectedModel,
             yearRanges: yearRanges
         });
-        let message = `📅 **${make} ${selectedModel}** - SELECT YEAR RANGE:\n\n`;
+        let message = `${make} ${selectedModel} - SELECT YEAR RANGE:\n\n`;
         yearRanges.forEach((yearRange, index) => {
             message += `${index + 1}. ${yearRange}\n`;
         });
-        message += `\n📝 Reply with the **number** or **specific year**`;
+        message += `\nReply with the number or specific year`;
         return message;
     }
     async handleYearSelection(userId, selection) {
@@ -236,9 +246,33 @@ class InteractiveVehicleCommand {
         if (!isNaN(num) && num >= 1 && num <= session.yearRanges.length) {
             const selectedRange = session.yearRanges[num - 1];
             this.updateSession(userId, { state: 'idle' });
-            return `📅 Selected range: **${selectedRange}**\n\nNow send: ${make} ${model} [specific year from ${selectedRange}]`;
+            // Show all vehicles for this make/model/range combination
+            if (selectedRange) {
+                return await this.showVehiclesForRange(make, model, selectedRange, userId);
+            }
         }
         return `Please enter a specific year or select a range (1-${session.yearRanges.length}).`;
+    }
+    handleVehicleSelectionForPricing(userId, selection) {
+        const session = this.getSession(userId);
+        if (!session.vehicleOptions || !session.make || !session.model) {
+            return 'Session expired. Please start over.';
+        }
+        const num = parseInt(selection, 10);
+        if (isNaN(num) || num < 1 || num > session.vehicleOptions.length) {
+            return `Please select a valid vehicle number (1-${session.vehicleOptions.length}).`;
+        }
+        const selectedVehicle = session.vehicleOptions[num - 1];
+        if (!selectedVehicle) {
+            return 'Invalid selection. Please try again.';
+        }
+        // Store the selected vehicle for pricing updates
+        this.updateSession(userId, {
+            state: 'idle',
+            vehicleData: selectedVehicle,
+            vehicleOptions: undefined
+        });
+        return `Selected: ${selectedVehicle.key || 'Vehicle'} for ${session.make} ${session.model}\n\nupdate pricing ? press 9`;
     }
     showPriceUpdateMenu(vehicleData) {
         return `🔧 **UPDATE PRICING FOR ${vehicleData.make} ${vehicleData.model}**\n\n` +
@@ -310,13 +344,96 @@ class InteractiveVehicleCommand {
         return Array.from(models).sort();
     }
     getYearRangesForVehicle(make, model) {
-        return this.vehicleData
+        const ranges = this.vehicleData
             .filter(vehicle => vehicle.make.toLowerCase() === make.toLowerCase() &&
             vehicle.model.toLowerCase() === model.toLowerCase())
             .map(vehicle => vehicle.yearRange)
             .filter(yearRange => yearRange.trim())
-            .filter((range, index, self) => self.indexOf(range) === index) // unique
-            .sort();
+            .filter((range, index, self) => self.indexOf(range) === index); // unique
+        // Sort to prioritize specific years (single years) over ranges
+        return ranges.sort((a, b) => {
+            const aIsRange = a.includes('-');
+            const bIsRange = b.includes('-');
+            // Single years first, then ranges
+            if (!aIsRange && bIsRange)
+                return -1;
+            if (aIsRange && !bIsRange)
+                return 1;
+            // Both same type, sort alphabetically/numerically
+            return a.localeCompare(b);
+        });
+    }
+    async showVehiclesForRange(make, model, selectedRange, userId) {
+        // Find all vehicles that match this make/model/range
+        const matchingVehicles = this.vehicleData.filter(vehicle => vehicle.make.toLowerCase() === make.toLowerCase() &&
+            vehicle.model.toLowerCase() === model.toLowerCase() &&
+            vehicle.yearRange === selectedRange);
+        if (matchingVehicles.length === 0) {
+            return `No data found for ${make} ${model} in range ${selectedRange}.`;
+        }
+        // If only one vehicle, show it directly with pricing
+        if (matchingVehicles.length === 1) {
+            const vehicle = matchingVehicles[0];
+            if (vehicle) {
+                const result = {
+                    id: vehicle.id,
+                    make: vehicle.make,
+                    model: vehicle.model,
+                    year: this.extractYearFromRange(selectedRange), // Use first year of range
+                    yearRange: vehicle.yearRange,
+                    key: vehicle.key,
+                    keyMinPrice: vehicle.keyMinPrice,
+                    remoteMinPrice: vehicle.remoteMinPrice,
+                    p2sMinPrice: vehicle.p2sMinPrice,
+                    ignitionMinPrice: vehicle.ignitionMinPrice
+                };
+                // Store for potential price updates
+                if (userId) {
+                    this.updateSession(userId, {
+                        state: 'idle',
+                        vehicleData: vehicle
+                    });
+                }
+                return (0, format_1.formatVehicleResult)(result);
+            }
+        }
+        // Multiple vehicles - show them all with selection for price updates
+        let message = `${make.toUpperCase()} ${model.toUpperCase()} (${selectedRange})\n\n`;
+        matchingVehicles.forEach((vehicle, index) => {
+            message += `${index + 1}. ${vehicle.key || 'Key Type'}\n`;
+            message += `Turn Key Min: $${vehicle.keyMinPrice}\n`;
+            message += `Remote Min: $${vehicle.remoteMinPrice}\n`;
+            message += `Push-to-Start Min: $${vehicle.p2sMinPrice}\n`;
+            message += `Ignition Change/Fix Min: $${vehicle.ignitionMinPrice}\n\n`;
+        });
+        if (matchingVehicles.length > 1) {
+            message += `To update pricing:\n1. Type the number (1-${matchingVehicles.length}) to select vehicle\n2. Then press 9 to update prices`;
+            // Store all vehicles for selection
+            if (userId) {
+                this.updateSession(userId, {
+                    state: 'selecting_vehicle_for_pricing',
+                    vehicleOptions: matchingVehicles,
+                    make: make,
+                    model: model
+                });
+            }
+        }
+        else {
+            message += `update pricing ? press 9`;
+            // Store single vehicle for pricing
+            if (userId && matchingVehicles[0]) {
+                this.updateSession(userId, {
+                    state: 'idle',
+                    vehicleData: matchingVehicles[0]
+                });
+            }
+        }
+        return message;
+    }
+    extractYearFromRange(yearRange) {
+        // Extract first year from range like "2008-2014" or single year like "2015"
+        const match = yearRange?.match(/^(\d{4})/);
+        return match && match[1] ? parseInt(match[1], 10) : 2015; // fallback
     }
 }
 exports.InteractiveVehicleCommand = InteractiveVehicleCommand;
