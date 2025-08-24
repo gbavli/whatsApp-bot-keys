@@ -11,9 +11,11 @@ export interface VehicleData {
 }
 
 export interface LookupResult {
+  id?: number; // Optional database ID for PostgreSQL
   make: string;
   model: string;
   year: number;
+  yearRange?: string; // Optional year range info
   key: string;
   keyMinPrice: string;
   remoteMinPrice: string;

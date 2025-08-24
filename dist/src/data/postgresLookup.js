@@ -35,7 +35,37 @@ class PostgresLookup {
     }
     async find(make, model, year) {
         const data = await this.getAllVehicles();
-        return (0, match_1.matchVehicle)(data, make, model, year);
+        const result = (0, match_1.matchVehicle)(data, make, model, year);
+        // Find the matching VehicleData to include id and yearRange
+        if (result) {
+            const vehicleData = data.find(v => v.make.toLowerCase() === result.make.toLowerCase() &&
+                v.model.toLowerCase() === result.model.toLowerCase() &&
+                this.yearMatches(v.yearRange, result.year));
+            if (vehicleData) {
+                return {
+                    ...result,
+                    id: vehicleData.id,
+                    yearRange: vehicleData.yearRange
+                };
+            }
+        }
+        return result;
+    }
+    yearMatches(yearRange, year) {
+        if (!yearRange)
+            return false;
+        // Handle single year
+        if (/^\d{4}$/.test(yearRange.trim())) {
+            return parseInt(yearRange.trim(), 10) === year;
+        }
+        // Handle year range
+        const rangeMatch = yearRange.match(/^(\d{4})\s*[-–]\s*(\d{4})$/);
+        if (rangeMatch && rangeMatch[1] && rangeMatch[2]) {
+            const startYear = parseInt(rangeMatch[1], 10);
+            const endYear = parseInt(rangeMatch[2], 10);
+            return year >= startYear && year <= endYear;
+        }
+        return false;
     }
     async getAllVehicles() {
         if (this.data) {

@@ -13,7 +13,7 @@ Push-to-Start Min: $${p2sMinPrice}
 Ignition Change/Fix Min: $${ignitionMinPrice}`;
 
   if (showPricingAction) {
-    message += `\n\n💰 **NEED TO UPDATE PRICING?**\n🔧 Press **9** to change prices for this vehicle`;
+    message += `\n\nupdate pricing ? press 9`;
   }
 
   return message;
@@ -29,36 +29,47 @@ export function formatInvalidInputMessage(): string {
 
 export interface ParsedInput {
   make: string;
-  model: string;
-  year: number;
+  model?: string;
+  year?: number;
+  type: 'full' | 'make_model' | 'make_only';
 }
 
 export function parseUserInput(input: string): ParsedInput | null {
   const trimmed = input.trim();
   const parts = trimmed.split(/\s+/);
 
-  if (parts.length < 3) {
+  if (parts.length < 1) {
     return null;
   }
 
-  // Last part should be the year
-  const yearStr = parts[parts.length - 1];
-  if (!yearStr) {
-    return null;
-  }
-  const year = parseInt(yearStr, 10);
-
-  if (isNaN(year) || year < 1900 || year > 2050) {
-    return null;
-  }
-
-  // First part is make, everything in between is model
   const make = parts[0];
-  const model = parts.slice(1, -1).join(' ');
-
-  if (!make || !model) {
+  if (!make) {
     return null;
   }
 
-  return { make, model, year };
+  // Single word - make only
+  if (parts.length === 1) {
+    return { make, type: 'make_only' };
+  }
+
+  // Check if last part is a year
+  const lastPart = parts[parts.length - 1];
+  if (!lastPart) {
+    return null;
+  }
+  const year = parseInt(lastPart, 10);
+  const hasYear = !isNaN(year) && year >= 1900 && year <= 2050;
+
+  if (hasYear && parts.length >= 3) {
+    // Full format: Make Model Year
+    const model = parts.slice(1, -1).join(' ');
+    return { make, model, year, type: 'full' };
+  } else if (!hasYear && parts.length >= 2) {
+    // Make Model (no year)
+    const model = parts.slice(1).join(' ');
+    return { make, model: model, type: 'make_model' };
+  }
+
+  // Invalid format
+  return null;
 }

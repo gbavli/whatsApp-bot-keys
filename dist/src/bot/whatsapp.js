@@ -45,6 +45,7 @@ const priceUpdateCommand_1 = require("../commands/priceUpdateCommand");
 const postgresUpdateCommand_1 = require("../commands/postgresUpdateCommand");
 const postgresLookup_1 = require("../data/postgresLookup");
 const enhancedVehicleCommand_1 = require("../commands/enhancedVehicleCommand");
+const interactiveVehicleCommand_1 = require("../commands/interactiveVehicleCommand");
 class WhatsAppBot {
     constructor(lookup, excelFilePath) {
         this.vehicleData = [];
@@ -59,6 +60,18 @@ class WhatsAppBot {
             this.enhancedVehicleCommand = {
                 processMessage: async () => null,
                 cleanupOldSessions: () => { }
+            };
+        }
+        // Initialize interactive command system
+        try {
+            this.interactiveCommand = new interactiveVehicleCommand_1.InteractiveVehicleCommand(lookup);
+            console.log('✅ Interactive vehicle command initialized');
+        }
+        catch (error) {
+            console.error('❌ Failed to initialize interactive vehicle command:', error);
+            // Create a minimal fallback
+            this.interactiveCommand = {
+                processMessage: async () => null
             };
         }
         this.loadVehicleData();
@@ -171,10 +184,20 @@ class WhatsAppBot {
         }
         // Skip greetings
         if (text.toLowerCase().match(/^(hi|hello|hey|test)$/i)) {
-            const greeting = 'Hello! Send me vehicle info like "Toyota Corolla 2015" to get pricing.';
-            return greeting + '\n\n💡 **NEW:** I can help with typos and offer suggestions!\n🔧 Press **9** after any vehicle lookup to update pricing.';
+            const greeting = 'Hello! Send me vehicle info to get pricing.';
+            return greeting + '\n\n💡 **EXAMPLES:**\n• "Toyota" - see all Toyota models\n• "Toyota Corolla" - see available years\n• "Toyota Corolla 2015" - get pricing\n• Press **9** after any result to update prices';
         }
-        // Try enhanced vehicle command first (handles suggestions, pricing, etc.)
+        // Try interactive vehicle command system first (NEW SYSTEM)
+        if (userId) {
+            console.log(`🎯 Trying interactive vehicle command`);
+            const interactiveResult = await this.interactiveCommand.processMessage(userId, text);
+            if (interactiveResult !== null) {
+                console.log(`✅ Interactive vehicle command handled the message`);
+                return interactiveResult;
+            }
+            console.log(`➡️ Interactive command didn't handle message, trying enhanced`);
+        }
+        // Try enhanced vehicle command (handles typos, suggestions, etc.)
         if (userId) {
             console.log(`🚀 Trying enhanced vehicle command`);
             const enhancedResult = await this.enhancedVehicleCommand.processMessage(userId, text);
@@ -188,7 +211,7 @@ class WhatsAppBot {
         console.log(`📝 Trying simple parsing fallback...`);
         const parsed = (0, format_1.parseUserInput)(text);
         console.log(`📋 Simple parsed:`, parsed);
-        if (parsed) {
+        if (parsed && parsed.type === 'full') {
             const { make, model, year } = parsed;
             console.log(`🔎 Looking for: ${make} ${model} ${year}`);
             const result = await this.lookup.find(make, model, year);
@@ -198,7 +221,7 @@ class WhatsAppBot {
             }
         }
         console.log(`❌ No match found for: "${text}"`);
-        return 'No matching record found for that vehicle.\n\n💡 **TIP:** Try sending just the make (e.g., "Toyota") to see available models!';
+        return 'No matching record found.\n\n💡 **TIP:** Try sending just the make (e.g., "Toyota") to see available models!';
     }
 }
 exports.WhatsAppBot = WhatsAppBot;
