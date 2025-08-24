@@ -17,15 +17,21 @@ class EnhancedVehicleCommand {
         try {
             // Load data in background without blocking startup
             setTimeout(async () => {
-                if ('getAllVehicles' in this.lookup) {
-                    this.vehicleData = await this.lookup.getAllVehicles();
-                    this.suggestionEngine = new vehicleSuggestions_1.VehicleSuggestionEngine(this.vehicleData);
-                    console.log(`✅ Enhanced vehicle command loaded ${this.vehicleData.length} vehicles`);
+                try {
+                    if ('getAllVehicles' in this.lookup) {
+                        this.vehicleData = await this.lookup.getAllVehicles();
+                        this.suggestionEngine = new vehicleSuggestions_1.VehicleSuggestionEngine(this.vehicleData);
+                        console.log(`✅ Enhanced vehicle command loaded ${this.vehicleData.length} vehicles`);
+                    }
                 }
-            }, 2000); // Wait 2 seconds after startup
+                catch (error) {
+                    console.error('❌ Failed to load vehicle data in background:', error);
+                    // Don't crash, just continue without enhanced features
+                }
+            }, 5000); // Wait 5 seconds after startup to ensure connection is stable
         }
         catch (error) {
-            console.error('❌ Failed to load vehicle data for enhanced commands:', error);
+            console.error('❌ Failed to setup lazy loading:', error);
         }
     }
     async processMessage(userId, message) {

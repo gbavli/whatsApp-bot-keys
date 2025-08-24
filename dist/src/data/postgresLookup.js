@@ -21,9 +21,20 @@ class PostgresLookup {
     }
     async connect() {
         if (!this.connected) {
-            await this.client.connect();
-            this.connected = true;
-            console.log('🔌 Connected to PostgreSQL');
+            try {
+                await this.client.connect();
+                this.connected = true;
+                console.log('🔌 Connected to PostgreSQL');
+            }
+            catch (error) {
+                if (error.message && error.message.includes('already been connected')) {
+                    console.log('ℹ️  PostgreSQL client already connected');
+                    this.connected = true;
+                }
+                else {
+                    throw error;
+                }
+            }
         }
     }
     async find(make, model, year) {

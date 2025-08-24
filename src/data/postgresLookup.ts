@@ -25,9 +25,18 @@ export class PostgresLookup implements VehicleLookup {
 
   async connect(): Promise<void> {
     if (!this.connected) {
-      await this.client.connect();
-      this.connected = true;
-      console.log('🔌 Connected to PostgreSQL');
+      try {
+        await this.client.connect();
+        this.connected = true;
+        console.log('🔌 Connected to PostgreSQL');
+      } catch (error: any) {
+        if (error.message && error.message.includes('already been connected')) {
+          console.log('ℹ️  PostgreSQL client already connected');
+          this.connected = true;
+        } else {
+          throw error;
+        }
+      }
     }
   }
 
