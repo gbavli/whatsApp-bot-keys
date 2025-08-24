@@ -316,7 +316,9 @@ class InteractiveVehicleCommand {
             const success = await this.lookup.updateVehiclePrice(vehicleData.id, fieldName, newPrice, userId);
             this.updateSession(userId, { state: 'idle' });
             if (success) {
-                return `✅ **PRICE UPDATED**\n\n${vehicleData.make} ${vehicleData.model}\n${this.getFieldDisplayName(fieldName)}: $${newPrice}\n\nUpdate saved to database!`;
+                const yearInfo = vehicleData.yearRange ? ` (${vehicleData.yearRange})` : '';
+                const keyInfo = vehicleData.key ? ` - ${vehicleData.key}` : '';
+                return `✅ **PRICE UPDATED**\n\n${vehicleData.make} ${vehicleData.model}${yearInfo}${keyInfo}\n${this.getFieldDisplayName(fieldName)}: $${newPrice}\n\nUpdate saved to database!`;
             }
             else {
                 return `❌ Failed to update price. Please try again.`;
