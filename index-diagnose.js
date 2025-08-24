@@ -13,6 +13,12 @@ async function runDiagnostics() {
     console.log('DATABASE_URL present:', !!process.env.DATABASE_URL);
     console.log('DATABASE_URL length:', process.env.DATABASE_URL ? process.env.DATABASE_URL.length : 0);
     console.log('NODE_ENV:', process.env.NODE_ENV || 'undefined');
+    console.log('All env vars starting with PG or DATABASE:');
+    Object.keys(process.env).forEach(key => {
+      if (key.startsWith('PG') || key.startsWith('DATABASE')) {
+        console.log(`- ${key}: ${key.includes('PASS') ? '[hidden]' : process.env[key]}`);
+      }
+    });
     
     console.log('\n=== STEP 2: Module Loading ===');
     const { Client } = require('pg');
