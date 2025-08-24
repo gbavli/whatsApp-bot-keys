@@ -265,6 +265,22 @@ class WhatsAppBot {
             const result = await this.lookup.find(make, model, year);
             console.log(`📊 Result:`, result);
             if (result) {
+                // Store vehicle data in interactive session for potential price updates
+                if (userId) {
+                    const vehicleData = {
+                        id: result.id,
+                        yearRange: result.yearRange || year.toString(),
+                        make: result.make,
+                        model: result.model,
+                        key: result.key,
+                        keyMinPrice: result.keyMinPrice,
+                        remoteMinPrice: result.remoteMinPrice,
+                        p2sMinPrice: result.p2sMinPrice,
+                        ignitionMinPrice: result.ignitionMinPrice
+                    };
+                    // Store vehicle data for potential price updates
+                    this.interactiveCommand.storeVehicleForPricing(userId, vehicleData);
+                }
                 return (0, format_1.formatVehicleResult)(result);
             }
             else {

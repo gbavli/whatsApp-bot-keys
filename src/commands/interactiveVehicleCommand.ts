@@ -71,6 +71,15 @@ export class InteractiveVehicleCommand {
     const session = this.getSession(userId);
     const trimmedText = text.trim();
 
+    console.log(`🎯 Interactive command - User: ${userId}, Text: "${trimmedText}", State: ${session.state}`);
+
+    // Check for exit commands first - works in any state
+    if (this.isExitCommand(trimmedText)) {
+      console.log(`🚪 Exit command detected: "${trimmedText}"`);
+      this.sessions.delete(userId); // Clear the session
+      return 'Cancelled. You can now send any vehicle request or command.';
+    }
+
     // Handle price update mode (press 9)
     if (session.state === 'updating_price') {
       return await this.handlePriceUpdate(userId, trimmedText);
@@ -93,6 +102,7 @@ export class InteractiveVehicleCommand {
 
     // Handle price update trigger (9)
     if (trimmedText === '9' && session.vehicleData) {
+      console.log(`🔧 Triggering price update mode for user: ${userId}`);
       this.updateSession(userId, { state: 'updating_price' });
       return this.showPriceUpdateMenu(session.vehicleData);
     }
@@ -107,7 +117,7 @@ export class InteractiveVehicleCommand {
 
     switch (parsed.type) {
       case 'make_only':
-        return this.handleMakeOnlySearch(userId, parsed.make);
+        return await this.handleMakeOnlySearch(userId, parsed.make);
       
       case 'make_model':
         return await this.handleMakeModelSearch(userId, parsed.make, parsed.model!);
@@ -119,9 +129,9 @@ export class InteractiveVehicleCommand {
     return null;
   }
 
-  private handleMakeOnlySearch(userId: string, make: string): string {
+  private async handleMakeOnlySearch(userId: string, make: string): Promise<string> {
     // Get all models for this make
-    const makeModels = this.getModelsForMake(make);
+    const makeModels = await this.getModelsForMake(make);
     
     if (makeModels.length === 0) {
       return `No models found for ${make}.`;
@@ -139,13 +149,13 @@ export class InteractiveVehicleCommand {
       message += `${index + 1}. ${model}\n`;
     });
     
-    message += `\nReply with the number or model name`;
+    message += `\nReply with the number or model name\nType "cancel" to exit`;
     return message;
   }
 
   private async handleMakeModelSearch(userId: string, make: string, model: string): Promise<string> {
     // Get year ranges for this make/model
-    const yearRanges = this.getYearRangesForVehicle(make, model);
+    const yearRanges = await this.getYearRangesForVehicle(make, model);
     
     if (yearRanges.length === 0) {
       return `No year ranges found for ${make} ${model}.`;
@@ -171,7 +181,7 @@ export class InteractiveVehicleCommand {
       message += `${index + 1}. ${yearRange}\n`;
     });
     
-    message += `\nReply with the number or specific year`;
+    message += `\nReply with the number or specific year\nType "cancel" to exit`;
     return message;
   }
 
@@ -199,7 +209,7 @@ export class InteractiveVehicleCommand {
       return formatVehicleResult(result);
     } else {
       // Try to offer alternative years
-      const yearRanges = this.getYearRangesForVehicle(make, model);
+      const yearRanges = await this.getYearRangesForVehicle(make, model);
       if (yearRanges.length > 0) {
         return `No exact match for ${make} ${model} ${year}.\n\nAvailable years: ${yearRanges.join(', ')}\n\nTry one of these years instead.`;
       }
@@ -228,11 +238,11 @@ export class InteractiveVehicleCommand {
     }
 
     if (!selectedModel) {
-      return `Please select a valid option (1-${session.models.length}) or model name.`;
+      return `Please select a valid option (1-${session.models.length}) or model name.\nType "cancel" to exit`;
     }
 
     // Now get year ranges for this make/model
-    const yearRanges = this.getYearRangesForVehicle(make, selectedModel);
+    const yearRanges = await this.getYearRangesForVehicle(make, selectedModel);
     
     if (yearRanges.length === 0) {
       this.updateSession(userId, { state: 'idle' });
@@ -259,7 +269,7 @@ export class InteractiveVehicleCommand {
       message += `${index + 1}. ${yearRange}\n`;
     });
     
-    message += `\nReply with the number or specific year`;
+    message += `\nReply with the number or specific year\nType "cancel" to exit`;
     return message;
   }
 
@@ -310,7 +320,7 @@ export class InteractiveVehicleCommand {
       }
     }
 
-    return `Please enter a specific year or select a range (1-${session.yearRanges.length}).`;
+    return `Please enter a specific year or select a range (1-${session.yearRanges.length}).\nType "cancel" to exit`;
   }
 
   private handleVehicleSelectionForPricing(userId: string, selection: string): string {
@@ -321,7 +331,7 @@ export class InteractiveVehicleCommand {
 
     const num = parseInt(selection, 10);
     if (isNaN(num) || num < 1 || num > session.vehicleOptions.length) {
-      return `Please select a valid vehicle number (1-${session.vehicleOptions.length}).`;
+      return `Please select a valid vehicle number (1-${session.vehicleOptions.length}).\nType "cancel" to exit`;
     }
 
     const selectedVehicle = session.vehicleOptions[num - 1];
@@ -340,14 +350,15 @@ export class InteractiveVehicleCommand {
   }
 
   private showPriceUpdateMenu(vehicleData: VehicleData): string {
-    return `🔧 **UPDATE PRICING FOR ${vehicleData.make} ${vehicleData.model}**\n\n` +
+    return `UPDATE PRICING FOR ${vehicleData.make} ${vehicleData.model}\n\n` +
            `Current Prices:\n` +
            `1. Turn Key Min: $${vehicleData.keyMinPrice}\n` +
            `2. Remote Min: $${vehicleData.remoteMinPrice}\n` +
            `3. Push-to-Start Min: $${vehicleData.p2sMinPrice}\n` +
            `4. Ignition Change/Fix Min: $${vehicleData.ignitionMinPrice}\n\n` +
-           `📝 Reply with: **[number] [new price]**\n` +
-           `Example: "1 150" to change Turn Key Min to $150`;
+           `Reply with: [number] [new price]\n` +
+           `Example: "1 150" to change Turn Key Min to $150\n\n` +
+           `Type "cancel" to exit pricing mode`;
   }
 
   private async handlePriceUpdate(userId: string, text: string): Promise<string> {
@@ -419,40 +430,91 @@ export class InteractiveVehicleCommand {
     return names[fieldName] || fieldName;
   }
 
-  private getModelsForMake(make: string): string[] {
-    const models = new Set<string>();
-    
-    this.vehicleData.forEach(vehicle => {
-      if (vehicle.make.toLowerCase() === make.toLowerCase()) {
-        models.add(vehicle.model);
+  private async getModelsForMake(make: string): Promise<string[]> {
+    try {
+      // Use database directly instead of cached data
+      let vehicles = this.vehicleData;
+      
+      // If cached data is empty, try to load from database
+      if (!vehicles || vehicles.length === 0) {
+        console.log(`🔍 No cached data, loading vehicles for ${make} from database`);
+        if ('getAllVehicles' in this.lookup) {
+          vehicles = await (this.lookup as any).getAllVehicles();
+          this.vehicleData = vehicles; // Update cache
+          console.log(`📊 Loaded ${vehicles.length} vehicles from database`);
+        }
       }
-    });
+      
+      if (!vehicles || vehicles.length === 0) {
+        console.log(`❌ No vehicle data available for ${make}`);
+        return [];
+      }
+      
+      const models = new Set<string>();
+      
+      vehicles.forEach(vehicle => {
+        if (vehicle.make.toLowerCase() === make.toLowerCase()) {
+          models.add(vehicle.model);
+        }
+      });
 
-    return Array.from(models).sort();
+      const modelList = Array.from(models).sort();
+      console.log(`🎯 Found ${modelList.length} models for ${make}:`, modelList.slice(0, 5), '...');
+      
+      return modelList;
+    } catch (error) {
+      console.error(`❌ Error getting models for ${make}:`, error);
+      return [];
+    }
   }
 
-  private getYearRangesForVehicle(make: string, model: string): string[] {
-    const ranges = this.vehicleData
-      .filter(vehicle => 
-        vehicle.make.toLowerCase() === make.toLowerCase() &&
-        vehicle.model.toLowerCase() === model.toLowerCase()
-      )
-      .map(vehicle => vehicle.yearRange)
-      .filter(yearRange => yearRange.trim())
-      .filter((range, index, self) => self.indexOf(range) === index); // unique
+  private async getYearRangesForVehicle(make: string, model: string): Promise<string[]> {
+    try {
+      // Use database directly instead of cached data
+      let vehicles = this.vehicleData;
+      
+      // If cached data is empty, try to load from database
+      if (!vehicles || vehicles.length === 0) {
+        console.log(`🔍 No cached data, loading vehicles for ${make} ${model} from database`);
+        if ('getAllVehicles' in this.lookup) {
+          vehicles = await (this.lookup as any).getAllVehicles();
+          this.vehicleData = vehicles; // Update cache
+          console.log(`📊 Loaded ${vehicles.length} vehicles from database`);
+        }
+      }
+      
+      if (!vehicles || vehicles.length === 0) {
+        console.log(`❌ No vehicle data available for ${make} ${model}`);
+        return [];
+      }
+      
+      const ranges = vehicles
+        .filter(vehicle => 
+          vehicle.make.toLowerCase() === make.toLowerCase() &&
+          vehicle.model.toLowerCase() === model.toLowerCase()
+        )
+        .map(vehicle => vehicle.yearRange)
+        .filter(yearRange => yearRange && yearRange.trim())
+        .filter((range, index, self) => self.indexOf(range) === index); // unique
 
-    // Sort to prioritize specific years (single years) over ranges
-    return ranges.sort((a, b) => {
-      const aIsRange = a.includes('-');
-      const bIsRange = b.includes('-');
-      
-      // Single years first, then ranges
-      if (!aIsRange && bIsRange) return -1;
-      if (aIsRange && !bIsRange) return 1;
-      
-      // Both same type, sort alphabetically/numerically
-      return a.localeCompare(b);
-    });
+      console.log(`🎯 Found ${ranges.length} year ranges for ${make} ${model}:`, ranges);
+
+      // Sort to prioritize specific years (single years) over ranges
+      return ranges.sort((a, b) => {
+        const aIsRange = a.includes('-');
+        const bIsRange = b.includes('-');
+        
+        // Single years first, then ranges
+        if (!aIsRange && bIsRange) return -1;
+        if (aIsRange && !bIsRange) return 1;
+        
+        // Both same type, sort alphabetically/numerically
+        return a.localeCompare(b);
+      });
+    } catch (error) {
+      console.error(`❌ Error getting year ranges for ${make} ${model}:`, error);
+      return [];
+    }
   }
 
   private async showVehiclesForRange(make: string, model: string, selectedRange: string, userId?: string): Promise<string> {
@@ -508,7 +570,7 @@ export class InteractiveVehicleCommand {
     });
 
     if (matchingVehicles.length > 1) {
-      message += `To update pricing:\n1. Type the number (1-${matchingVehicles.length}) to select vehicle\n2. Then press 9 to update prices`;
+      message += `To update pricing:\n1. Type the number (1-${matchingVehicles.length}) to select vehicle\n2. Then press 9 to update prices\n\nType "cancel" to exit`;
       
       // Store all vehicles for selection
       if (userId) {
@@ -538,5 +600,23 @@ export class InteractiveVehicleCommand {
     // Extract first year from range like "2008-2014" or single year like "2015"
     const match = yearRange?.match(/^(\d{4})/);
     return match && match[1] ? parseInt(match[1], 10) : 2015; // fallback
+  }
+
+  private isExitCommand(text: string): boolean {
+    const exitCommands = [
+      'cancel', 'exit', 'stop', 'back', 'quit', 'done', 'no', 'nevermind', 'never mind'
+    ];
+    const lowerText = text.toLowerCase().trim();
+    const isExit = exitCommands.includes(lowerText);
+    console.log(`🚪 Checking exit command: "${text}" -> "${lowerText}" -> ${isExit}`);
+    return isExit;
+  }
+
+  // Public method to store vehicle data for price updates
+  public storeVehicleForPricing(userId: string, vehicleData: VehicleData): void {
+    this.updateSession(userId, {
+      state: 'idle',
+      vehicleData: vehicleData
+    });
   }
 }

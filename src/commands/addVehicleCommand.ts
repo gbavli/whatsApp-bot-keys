@@ -86,12 +86,12 @@ export class AddVehicleCommand {
              `• "Smart Key"\n` +
              `• "Proximity Key"\n` +
              `• "Transponder Key"\n\n` +
-             `Reply with the key type:`;
+             `Reply with the key type:\nType "cancel" to exit`;
     }
 
     return `🆕 ADD NEW VEHICLE\n\n` +
            `Let's add this vehicle to the database.\n\n` +
-           `What's the make? (e.g., "BMW", "Toyota")`;
+           `What's the make? (e.g., "BMW", "Toyota")\nType "cancel" to exit`;
   }
 
   async processMessage(userId: string, text: string): Promise<string | null> {
@@ -101,6 +101,12 @@ export class AddVehicleCommand {
     }
 
     const trimmedText = text.trim();
+
+    // Check for exit commands first - works in any state
+    if (this.isExitCommand(trimmedText)) {
+      this.sessions.delete(userId); // Clear the session
+      return 'Vehicle addition cancelled. You can now send any vehicle request or command.';
+    }
 
     switch (session.state) {
       case 'pending_make':
@@ -127,7 +133,7 @@ export class AddVehicleCommand {
 
   private handleMakeInput(userId: string, make: string): string {
     if (!make || make.length < 2) {
-      return 'Please enter a valid make (e.g., "BMW", "Toyota")';
+      return 'Please enter a valid make (e.g., "BMW", "Toyota")\nType "cancel" to exit';
     }
 
     this.updateSession(userId, {
@@ -136,12 +142,12 @@ export class AddVehicleCommand {
     });
 
     return `Make: ${this.capitalizeMake(make)}\n\n` +
-           `What's the model? (e.g., "i8", "Corolla")`;
+           `What's the model? (e.g., "i8", "Corolla")\nType "cancel" to exit`;
   }
 
   private handleModelInput(userId: string, model: string): string {
     if (!model || model.length < 1) {
-      return 'Please enter a valid model (e.g., "i8", "Corolla")';
+      return 'Please enter a valid model (e.g., "i8", "Corolla")\nType "cancel" to exit';
     }
 
     this.updateSession(userId, {
@@ -155,7 +161,7 @@ export class AddVehicleCommand {
            `Examples:\n` +
            `• "2023" (single year)\n` +
            `• "2020-2024" (range)\n\n` +
-           `Reply with the year:`;
+           `Reply with the year:\nType "cancel" to exit`;
   }
 
   private handleYearInput(userId: string, yearInput: string): string {
@@ -163,7 +169,7 @@ export class AddVehicleCommand {
     
     // Validate year format
     if (!/^\d{4}(-\d{4})?$/.test(yearInput.trim())) {
-      return 'Please enter a valid year format:\n• "2023" (single year)\n• "2020-2024" (range)';
+      return 'Please enter a valid year format:\n• "2023" (single year)\n• "2020-2024" (range)\nType "cancel" to exit';
     }
 
     // Extract year for database
@@ -174,7 +180,7 @@ export class AddVehicleCommand {
     }
     const firstYear = parseInt(firstYearStr);
     if (firstYear < 1900 || firstYear > 2030) {
-      return 'Please enter a realistic year (1900-2030)';
+      return 'Please enter a realistic year (1900-2030)\nType "cancel" to exit';
     }
 
     this.updateSession(userId, {
@@ -190,12 +196,12 @@ export class AddVehicleCommand {
            `• "Smart Key"\n` +
            `• "Proximity Key"\n` +
            `• "Transponder Key"\n\n` +
-           `Reply with the key type:`;
+           `Reply with the key type:\nType "cancel" to exit`;
   }
 
   private handleKeyInput(userId: string, keyType: string): string {
     if (!keyType || keyType.length < 2) {
-      return 'Please enter a valid key type (e.g., "Smart Key", "Standard Key")';
+      return 'Please enter a valid key type (e.g., "Smart Key", "Standard Key")\nType "cancel" to exit';
     }
 
     this.updateSession(userId, {
@@ -208,7 +214,7 @@ export class AddVehicleCommand {
            `Now enter the pricing information:\n\n` +
            `Format: [turn key] [remote] [push2start] [ignition]\n` +
            `Example: "150 180 250 300"\n\n` +
-           `Enter all 4 prices separated by spaces:`;
+           `Enter all 4 prices separated by spaces:\nType "cancel" to exit`;
   }
 
   private handlePricesInput(userId: string, pricesText: string): string {
@@ -217,14 +223,14 @@ export class AddVehicleCommand {
     if (prices.length !== 4) {
       return 'Please enter exactly 4 prices separated by spaces:\n' +
              'Format: [turn key] [remote] [push2start] [ignition]\n' +
-             'Example: "150 180 250 300"';
+             'Example: "150 180 250 300"\nType "cancel" to exit';
     }
 
     // Validate all prices are numbers
     const numericPrices = prices.map(p => parseInt(p.replace(/\$/, '')));
     if (numericPrices.some(p => isNaN(p) || p < 0 || p > 9999)) {
       return 'Please enter valid prices (0-9999):\n' +
-             'Example: "150 180 250 300"';
+             'Example: "150 180 250 300"\nType "cancel" to exit';
     }
 
     this.updateSession(userId, {
@@ -243,7 +249,7 @@ export class AddVehicleCommand {
            `Remote Min: $${session.remoteMinPrice}\n` +
            `Push-to-Start Min: $${session.p2sMinPrice}\n` +
            `Ignition Change/Fix Min: $${session.ignitionMinPrice}\n\n` +
-           `Type "YES" to add this vehicle or "NO" to cancel:`;
+           `Type "YES" to add this vehicle or "cancel" to exit:`;
   }
 
   private async handleConfirmation(userId: string, confirmation: string): Promise<string> {
@@ -359,5 +365,13 @@ export class AddVehicleCommand {
       return 'Vehicle addition cancelled.';
     }
     return '';
+  }
+
+  private isExitCommand(text: string): boolean {
+    const exitCommands = [
+      'cancel', 'exit', 'stop', 'back', 'quit', 'done', 'no', 'nevermind', 'never mind'
+    ];
+    const lowerText = text.toLowerCase().trim();
+    return exitCommands.includes(lowerText);
   }
 }

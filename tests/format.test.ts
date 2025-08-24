@@ -14,6 +14,7 @@ describe('parseUserInput', () => {
       make: 'Toyota',
       model: 'Corolla',
       year: 2015,
+      type: 'full',
     });
   });
 
@@ -23,6 +24,7 @@ describe('parseUserInput', () => {
       make: 'Mercedes-Benz',
       model: 'C Class',
       year: 2020,
+      type: 'full',
     });
   });
 
@@ -32,22 +34,43 @@ describe('parseUserInput', () => {
       make: 'Toyota',
       model: 'Corolla',
       year: 2015,
+      type: 'full',
     });
   });
 
-  it('should return null for insufficient parts', () => {
-    const result = parseUserInput('Toyota 2015');
-    expect(result).toBeNull();
+  it('should parse make only', () => {
+    const result = parseUserInput('Toyota');
+    expect(result).toEqual({
+      make: 'Toyota',
+      type: 'make_only',
+    });
   });
 
-  it('should return null for invalid year', () => {
+  it('should parse make and model', () => {
+    const result = parseUserInput('Toyota Corolla');
+    expect(result).toEqual({
+      make: 'Toyota',
+      model: 'Corolla',
+      type: 'make_model',
+    });
+  });
+
+  it('should parse make and model even with non-year text', () => {
     const result = parseUserInput('Toyota Corolla abc');
-    expect(result).toBeNull();
+    expect(result).toEqual({
+      make: 'Toyota',
+      model: 'Corolla abc',
+      type: 'make_model',
+    });
   });
 
-  it('should return null for year out of reasonable range', () => {
+  it('should parse make and model for year out of range', () => {
     const result = parseUserInput('Toyota Corolla 1800');
-    expect(result).toBeNull();
+    expect(result).toEqual({
+      make: 'Toyota',
+      model: 'Corolla 1800',
+      type: 'make_model',
+    });
   });
 });
 
@@ -68,10 +91,12 @@ describe('formatVehicleResult', () => {
     const expected = `Toyota Corolla 2015
 
 Key: TOY43
-Key Min: $120
+Turn Key Min: $120
 Remote Min: $80
 Push-to-Start Min: $200
-Ignition Change/Fix Min: $150`;
+Ignition Change/Fix Min: $150
+
+update pricing ? press 9`;
 
     expect(formatted).toBe(expected);
   });
@@ -91,11 +116,13 @@ Ignition Change/Fix Min: $150`;
     const formatted = formatVehicleResult(result);
     const expected = `Honda Civic 2020
 
-Key: 
-Key Min: $
+Key: N/A
+Turn Key Min: N/A
 Remote Min: $95
-Push-to-Start Min: $
-Ignition Change/Fix Min: $180`;
+Push-to-Start Min: N/A
+Ignition Change/Fix Min: $180
+
+update pricing ? press 9`;
 
     expect(formatted).toBe(expected);
   });
