@@ -33,27 +33,24 @@ export class EnhancedVehicleCommand {
   
   constructor(lookup: VehicleLookup) {
     this.lookup = lookup;
-    // Load vehicle data lazily to avoid startup timeout
-    this.loadVehicleDataLazy();
+    // Load vehicle data immediately for smart parsing
+    this.loadVehicleDataImmediate();
   }
 
-  private async loadVehicleDataLazy(): Promise<void> {
+  private async loadVehicleDataImmediate(): Promise<void> {
     try {
-      // Load data in background without blocking startup
-      setTimeout(async () => {
-        try {
-          if ('getAllVehicles' in this.lookup) {
-            this.vehicleData = await (this.lookup as any).getAllVehicles();
-            this.suggestionEngine = new VehicleSuggestionEngine(this.vehicleData);
-            console.log(`✅ Enhanced vehicle command loaded ${this.vehicleData.length} vehicles`);
-          }
-        } catch (error) {
-          console.error('❌ Failed to load vehicle data in background:', error);
-          // Don't crash, just continue without enhanced features
-        }
-      }, 5000); // Wait 5 seconds after startup to ensure connection is stable
+      console.log('🔄 Enhanced command: Loading vehicle data for smart parsing...');
+      if ('getAllVehicles' in this.lookup) {
+        this.vehicleData = await (this.lookup as any).getAllVehicles();
+        this.suggestionEngine = new VehicleSuggestionEngine(this.vehicleData);
+        console.log(`✅ Enhanced vehicle command loaded ${this.vehicleData.length} vehicles with intelligent parsing`);
+      } else {
+        console.log('⚠️ Enhanced command: Lookup does not support getAllVehicles');
+      }
     } catch (error) {
-      console.error('❌ Failed to setup lazy loading:', error);
+      console.error('❌ Enhanced command: Failed to load vehicle data:', error);
+      // Don't crash, continue with limited functionality
+      console.log('ℹ️ Enhanced command: Will work with basic parsing only');
     }
   }
 
@@ -72,36 +69,49 @@ export class EnhancedVehicleCommand {
         return `❌ You need to search for a vehicle first.\n\nPlease send: Make Model Year\nExample: Toyota Corolla 2015`;
       }
 
-      // Check if suggestion engine is ready
-      if (this.vehicleData.length === 0 || !this.suggestionEngine) {
-        // Enhanced features not ready yet, return null to let fallback handle
-        return null;
+      // Try intelligent parsing with vehicle data if available
+      if (this.vehicleData.length > 0) {
+        console.log(`🧠 Enhanced command: Using intelligent parsing with ${this.vehicleData.length} vehicles`);
+        const smartResults = smartParseVehicle(input, this.vehicleData);
+        
+        if (smartResults.length > 0) {
+          console.log(`🎯 Enhanced command: Smart parser found ${smartResults.length} matches`);
+          // Try the best match first
+          for (const match of smartResults) {
+            console.log(`🔎 Enhanced command: Trying ${match.make} ${match.model} ${match.year} (confidence: ${match.confidence})`);
+            const result = await this.lookup.find(match.make, match.model, match.year);
+            if (result) {
+              console.log(`✅ Enhanced command: Found exact match in database`);
+              // Store successful lookup in session for potential pricing updates
+              this.sessions.set(userId, {
+                userId,
+                step: 'awaiting_pricing_action',
+                currentVehicle: {
+                  make: match.make,
+                  model: match.model,
+                  year: match.year,
+                  yearRange: this.findYearRangeForVehicle(match.make, match.model, match.year),
+                  id: this.findVehicleId(match.make, match.model, match.year)
+                }
+              });
+              
+              return formatVehicleResult(result, true);
+            } else {
+              console.log(`❌ Enhanced command: Smart match not found in database: ${match.make} ${match.model} ${match.year}`);
+            }
+          }
+          console.log(`❌ Enhanced command: No smart matches found in database`);
+        } else {
+          console.log(`❌ Enhanced command: Smart parser found no matches for: "${input}"`);
+        }
+      } else {
+        console.log(`⚠️ Enhanced command: No vehicle data loaded yet, using suggestions engine only`);
       }
 
-      // Try normal vehicle lookup first
-      const smartResults = smartParseVehicle(input, this.vehicleData);
-      
-      if (smartResults.length > 0) {
-        // Try the best match
-        for (const match of smartResults) {
-          const result = await this.lookup.find(match.make, match.model, match.year);
-          if (result) {
-            // Store successful lookup in session for potential pricing updates
-            this.sessions.set(userId, {
-              userId,
-              step: 'awaiting_pricing_action',
-              currentVehicle: {
-                make: match.make,
-                model: match.model,
-                year: match.year,
-                yearRange: this.findYearRangeForVehicle(match.make, match.model, match.year),
-                id: this.findVehicleId(match.make, match.model, match.year)
-              }
-            });
-            
-            return formatVehicleResult(result, true);
-          }
-        }
+      // If smart parsing didn't work, try suggestion engine for make/model suggestions
+      if (!this.suggestionEngine) {
+        console.log(`⚠️ Enhanced command: Suggestion engine not ready, returning null`);
+        return null;
       }
 
       // If no exact match, try to provide suggestions

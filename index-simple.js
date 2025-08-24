@@ -14,7 +14,7 @@ async function createSimpleBot() {
     const lookup = new PostgresLookup();
     
     console.log('🤖 Creating WhatsApp bot...');
-    // Create bot without enhanced vehicle command to avoid connection issues
+    // Create bot with full functionality but safer error handling
     const bot = new WhatsAppBot(lookup);
     
     console.log('📱 Starting WhatsApp connection...');
