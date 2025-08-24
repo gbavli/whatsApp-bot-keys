@@ -10,33 +10,42 @@ class EnhancedVehicleCommand {
         this.sessions = new Map();
         this.vehicleData = [];
         this.lookup = lookup;
-        this.loadVehicleData();
+        // Load vehicle data lazily to avoid startup timeout
+        this.loadVehicleDataLazy();
     }
-    async loadVehicleData() {
+    async loadVehicleDataLazy() {
         try {
-            if ('getAllVehicles' in this.lookup) {
-                this.vehicleData = await this.lookup.getAllVehicles();
-                this.suggestionEngine = new vehicleSuggestions_1.VehicleSuggestionEngine(this.vehicleData);
-                console.log(`✅ Enhanced vehicle command loaded ${this.vehicleData.length} vehicles`);
-            }
+            // Load data in background without blocking startup
+            setTimeout(async () => {
+                if ('getAllVehicles' in this.lookup) {
+                    this.vehicleData = await this.lookup.getAllVehicles();
+                    this.suggestionEngine = new vehicleSuggestions_1.VehicleSuggestionEngine(this.vehicleData);
+                    console.log(`✅ Enhanced vehicle command loaded ${this.vehicleData.length} vehicles`);
+                }
+            }, 2000); // Wait 2 seconds after startup
         }
         catch (error) {
             console.error('❌ Failed to load vehicle data for enhanced commands:', error);
         }
     }
     async processMessage(userId, message) {
-        const session = this.sessions.get(userId);
-        const input = message.trim();
-        // Handle numeric inputs for sessions
-        if (session) {
-            return this.handleSessionStep(userId, session, input);
-        }
-        // Handle pricing action (9)
-        if (input === '9') {
-            return `❌ You need to search for a vehicle first.\n\nPlease send: Make Model Year\nExample: Toyota Corolla 2015`;
-        }
-        // Try normal vehicle lookup first
-        if (this.vehicleData.length > 0 && this.suggestionEngine) {
+        try {
+            const session = this.sessions.get(userId);
+            const input = message.trim();
+            // Handle numeric inputs for sessions
+            if (session) {
+                return this.handleSessionStep(userId, session, input);
+            }
+            // Handle pricing action (9)
+            if (input === '9') {
+                return `❌ You need to search for a vehicle first.\n\nPlease send: Make Model Year\nExample: Toyota Corolla 2015`;
+            }
+            // Check if suggestion engine is ready
+            if (this.vehicleData.length === 0 || !this.suggestionEngine) {
+                // Enhanced features not ready yet, return null to let fallback handle
+                return null;
+            }
+            // Try normal vehicle lookup first
             const smartResults = (0, intelligentParser_1.smartParseVehicle)(input, this.vehicleData);
             if (smartResults.length > 0) {
                 // Try the best match
@@ -87,8 +96,12 @@ class EnhancedVehicleCommand {
                 message += `\n📝 **Reply with make name** to see available models`;
                 return message;
             }
+            return null; // Not handled by this command
         }
-        return null; // Not handled by this command
+        catch (error) {
+            console.error('❌ Enhanced vehicle command error:', error);
+            return null; // Let fallback handle the message
+        }
     }
     async handleSessionStep(userId, session, input) {
         const trimmedInput = input.toLowerCase().trim();
