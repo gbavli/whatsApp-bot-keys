@@ -18,14 +18,17 @@ import { smartParseVehicle, SmartParseResult } from '../logic/intelligentParser'
 import { PriceUpdateCommand } from '../commands/priceUpdateCommand';
 import { PostgresUpdateCommand } from '../commands/postgresUpdateCommand';
 import { PostgresLookup } from '../data/postgresLookup';
+import { EnhancedVehicleCommand } from '../commands/enhancedVehicleCommand';
 
 export class WhatsAppBot {
   private lookup: VehicleLookup;
   private vehicleData: VehicleData[] = [];
   private priceUpdateCommand?: PriceUpdateCommand | PostgresUpdateCommand;
+  private enhancedVehicleCommand: EnhancedVehicleCommand;
 
   constructor(lookup: VehicleLookup, excelFilePath?: string) {
     this.lookup = lookup;
+    this.enhancedVehicleCommand = new EnhancedVehicleCommand(lookup);
     this.loadVehicleData();
     
     // Initialize appropriate price update command based on lookup type
@@ -142,10 +145,10 @@ export class WhatsAppBot {
   private async processMessage(text: string, userId?: string): Promise<string> {
     console.log(`🔍 Processing: "${text}"`);
     
-    // Handle price update commands first (if price update command is available)
+    // Handle price update commands first (legacy command system)
     if (this.priceUpdateCommand && userId) {
       if (this.priceUpdateCommand.isCommand(text)) {
-        console.log(`🔧 Processing price update command`);
+        console.log(`🔧 Processing legacy price update command`);
         return this.priceUpdateCommand.processCommand(userId, text);
       }
     }
@@ -153,40 +156,22 @@ export class WhatsAppBot {
     // Skip greetings
     if (text.toLowerCase().match(/^(hi|hello|hey|test)$/i)) {
       const greeting = 'Hello! Send me vehicle info like "Toyota Corolla 2015" to get pricing.';
-      if (this.priceUpdateCommand) {
-        return greeting + '\n\nType `help` for price update commands.';
-      }
-      return greeting;
+      return greeting + '\n\n💡 **NEW:** I can help with typos and offer suggestions!\n🔧 Press **9** after any vehicle lookup to update pricing.';
     }
     
-    // Try intelligent parsing first (handles any order)
-    if (this.vehicleData.length > 0) {
-      console.log(`🧠 Trying intelligent parsing with ${this.vehicleData.length} vehicle records`);
-      const smartResults = smartParseVehicle(text, this.vehicleData);
-      
-      if (smartResults.length > 0) {
-        console.log(`🎯 Smart parser found ${smartResults.length} potential matches:`);
-        smartResults.forEach((match, i) => {
-          console.log(`   ${i + 1}. ${match.make} ${match.model} ${match.year} (confidence: ${match.confidence})`);
-        });
-        
-        // Try the best match first
-        for (const match of smartResults) {
-          console.log(`🔎 Trying smart match: ${match.make} ${match.model} ${match.year}`);
-          const result = await this.lookup.find(match.make, match.model, match.year);
-          if (result) {
-            console.log(`✅ Smart parser success!`);
-            return formatVehicleResult(result);
-          }
-        }
-        console.log(`❌ Smart parser matches found but no data results`);
-      } else {
-        console.log(`❌ Smart parser found no matches`);
+    // Try enhanced vehicle command first (handles suggestions, pricing, etc.)
+    if (userId) {
+      console.log(`🚀 Trying enhanced vehicle command`);
+      const enhancedResult = await this.enhancedVehicleCommand.processMessage(userId, text);
+      if (enhancedResult !== null) {
+        console.log(`✅ Enhanced vehicle command handled the message`);
+        return enhancedResult;
       }
+      console.log(`➡️ Enhanced command didn't handle message, trying fallback`);
     }
     
-    // Fallback to simple parsing (Make Model Year only)
-    console.log(`📝 Trying simple parsing...`);
+    // Fallback to simple parsing for basic cases
+    console.log(`📝 Trying simple parsing fallback...`);
     const parsed = parseUserInput(text);
     console.log(`📋 Simple parsed:`, parsed);
     
@@ -199,11 +184,9 @@ export class WhatsAppBot {
       if (result) {
         return formatVehicleResult(result);
       }
-    } else {
-      return formatInvalidInputMessage();
     }
 
     console.log(`❌ No match found for: "${text}"`);
-    return formatNotFoundMessage();
+    return 'No matching record found for that vehicle.\n\n💡 **TIP:** Try sending just the make (e.g., "Toyota") to see available models!';
   }
 }

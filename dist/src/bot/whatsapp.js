@@ -41,14 +41,15 @@ const baileys_1 = __importStar(require("@whiskeysockets/baileys"));
 const pino_1 = __importDefault(require("pino"));
 const QRCode = __importStar(require("qrcode-terminal"));
 const format_1 = require("../logic/format");
-const intelligentParser_1 = require("../logic/intelligentParser");
 const priceUpdateCommand_1 = require("../commands/priceUpdateCommand");
 const postgresUpdateCommand_1 = require("../commands/postgresUpdateCommand");
 const postgresLookup_1 = require("../data/postgresLookup");
+const enhancedVehicleCommand_1 = require("../commands/enhancedVehicleCommand");
 class WhatsAppBot {
     constructor(lookup, excelFilePath) {
         this.vehicleData = [];
         this.lookup = lookup;
+        this.enhancedVehicleCommand = new enhancedVehicleCommand_1.EnhancedVehicleCommand(lookup);
         this.loadVehicleData();
         // Initialize appropriate price update command based on lookup type
         if (lookup instanceof postgresLookup_1.PostgresLookup) {
@@ -143,47 +144,30 @@ class WhatsAppBot {
     }
     async processMessage(text, userId) {
         console.log(`🔍 Processing: "${text}"`);
-        // Handle price update commands first (if price update command is available)
+        // Handle price update commands first (legacy command system)
         if (this.priceUpdateCommand && userId) {
             if (this.priceUpdateCommand.isCommand(text)) {
-                console.log(`🔧 Processing price update command`);
+                console.log(`🔧 Processing legacy price update command`);
                 return this.priceUpdateCommand.processCommand(userId, text);
             }
         }
         // Skip greetings
         if (text.toLowerCase().match(/^(hi|hello|hey|test)$/i)) {
             const greeting = 'Hello! Send me vehicle info like "Toyota Corolla 2015" to get pricing.';
-            if (this.priceUpdateCommand) {
-                return greeting + '\n\nType `help` for price update commands.';
-            }
-            return greeting;
+            return greeting + '\n\n💡 **NEW:** I can help with typos and offer suggestions!\n🔧 Press **9** after any vehicle lookup to update pricing.';
         }
-        // Try intelligent parsing first (handles any order)
-        if (this.vehicleData.length > 0) {
-            console.log(`🧠 Trying intelligent parsing with ${this.vehicleData.length} vehicle records`);
-            const smartResults = (0, intelligentParser_1.smartParseVehicle)(text, this.vehicleData);
-            if (smartResults.length > 0) {
-                console.log(`🎯 Smart parser found ${smartResults.length} potential matches:`);
-                smartResults.forEach((match, i) => {
-                    console.log(`   ${i + 1}. ${match.make} ${match.model} ${match.year} (confidence: ${match.confidence})`);
-                });
-                // Try the best match first
-                for (const match of smartResults) {
-                    console.log(`🔎 Trying smart match: ${match.make} ${match.model} ${match.year}`);
-                    const result = await this.lookup.find(match.make, match.model, match.year);
-                    if (result) {
-                        console.log(`✅ Smart parser success!`);
-                        return (0, format_1.formatVehicleResult)(result);
-                    }
-                }
-                console.log(`❌ Smart parser matches found but no data results`);
+        // Try enhanced vehicle command first (handles suggestions, pricing, etc.)
+        if (userId) {
+            console.log(`🚀 Trying enhanced vehicle command`);
+            const enhancedResult = await this.enhancedVehicleCommand.processMessage(userId, text);
+            if (enhancedResult !== null) {
+                console.log(`✅ Enhanced vehicle command handled the message`);
+                return enhancedResult;
             }
-            else {
-                console.log(`❌ Smart parser found no matches`);
-            }
+            console.log(`➡️ Enhanced command didn't handle message, trying fallback`);
         }
-        // Fallback to simple parsing (Make Model Year only)
-        console.log(`📝 Trying simple parsing...`);
+        // Fallback to simple parsing for basic cases
+        console.log(`📝 Trying simple parsing fallback...`);
         const parsed = (0, format_1.parseUserInput)(text);
         console.log(`📋 Simple parsed:`, parsed);
         if (parsed) {
@@ -195,11 +179,8 @@ class WhatsAppBot {
                 return (0, format_1.formatVehicleResult)(result);
             }
         }
-        else {
-            return (0, format_1.formatInvalidInputMessage)();
-        }
         console.log(`❌ No match found for: "${text}"`);
-        return (0, format_1.formatNotFoundMessage)();
+        return 'No matching record found for that vehicle.\n\n💡 **TIP:** Try sending just the make (e.g., "Toyota") to see available models!';
     }
 }
 exports.WhatsAppBot = WhatsAppBot;

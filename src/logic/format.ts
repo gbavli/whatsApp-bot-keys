@@ -1,16 +1,22 @@
 import { LookupResult } from '../data/vehicleLookup';
 
-export function formatVehicleResult(result: LookupResult): string {
+export function formatVehicleResult(result: LookupResult, showPricingAction = true): string {
   const { make, model, year, key, keyMinPrice, remoteMinPrice, p2sMinPrice, ignitionMinPrice } =
     result;
 
-  return `${make} ${model} ${year}
+  let message = `${make} ${model} ${year}
 
 Key: ${key}
-Key Min: $${keyMinPrice}
+Turn Key Min: $${keyMinPrice}
 Remote Min: $${remoteMinPrice}
 Push-to-Start Min: $${p2sMinPrice}
 Ignition Change/Fix Min: $${ignitionMinPrice}`;
+
+  if (showPricingAction) {
+    message += `\n\n💰 **NEED TO UPDATE PRICING?**\n🔧 Press **9** to change prices for this vehicle`;
+  }
+
+  return message;
 }
 
 export function formatNotFoundMessage(): string {

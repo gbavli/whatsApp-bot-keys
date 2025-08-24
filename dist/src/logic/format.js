@@ -4,15 +4,19 @@ exports.formatVehicleResult = formatVehicleResult;
 exports.formatNotFoundMessage = formatNotFoundMessage;
 exports.formatInvalidInputMessage = formatInvalidInputMessage;
 exports.parseUserInput = parseUserInput;
-function formatVehicleResult(result) {
+function formatVehicleResult(result, showPricingAction = true) {
     const { make, model, year, key, keyMinPrice, remoteMinPrice, p2sMinPrice, ignitionMinPrice } = result;
-    return `${make} ${model} ${year}
+    let message = `${make} ${model} ${year}
 
 Key: ${key}
-Key Min: $${keyMinPrice}
+Turn Key Min: $${keyMinPrice}
 Remote Min: $${remoteMinPrice}
 Push-to-Start Min: $${p2sMinPrice}
 Ignition Change/Fix Min: $${ignitionMinPrice}`;
+    if (showPricingAction) {
+        message += `\n\n💰 **NEED TO UPDATE PRICING?**\n🔧 Press **9** to change prices for this vehicle`;
+    }
+    return message;
 }
 function formatNotFoundMessage() {
     return 'No matching record found for that vehicle.';
