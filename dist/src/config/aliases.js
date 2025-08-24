@@ -20,6 +20,7 @@ exports.MAKE_ALIASES = {
     chevrolet: 'Chevrolet',
     cheverolet: 'Chevrolet', // common misspelling
     chevorlet: 'Chevrolet', // common misspelling
+    chevrloet: 'Chevrolet', // common misspelling
     ford: 'Ford',
     gm: 'General Motors',
     caddy: 'Cadillac',

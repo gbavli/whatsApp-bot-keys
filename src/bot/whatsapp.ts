@@ -191,7 +191,20 @@ export class WhatsAppBot {
       return greeting + '\n\n💡 **EXAMPLES:**\n• "Toyota" - see all Toyota models\n• "Toyota Corolla" - see available years\n• "Toyota Corolla 2015" - get pricing\n• Press **9** after any result to update prices';
     }
     
-    // Try interactive vehicle command system first (NEW SYSTEM)
+    // For long complex text with potential typos, try enhanced parsing first
+    const isComplexText = text.split(/\s+/).length > 3;
+    
+    if (userId && isComplexText) {
+      console.log(`🧠 Complex text detected, trying enhanced parsing first`);
+      const enhancedResult = await this.enhancedVehicleCommand.processMessage(userId, text);
+      if (enhancedResult !== null) {
+        console.log(`✅ Enhanced vehicle command handled complex text`);
+        return enhancedResult;
+      }
+      console.log(`➡️ Enhanced didn't handle complex text, trying interactive`);
+    }
+    
+    // Try interactive vehicle command system for simple searches
     if (userId) {
       console.log(`🎯 Trying interactive vehicle command`);
       const interactiveResult = await this.interactiveCommand.processMessage(userId, text);
@@ -202,9 +215,9 @@ export class WhatsAppBot {
       console.log(`➡️ Interactive command didn't handle message, trying enhanced`);
     }
     
-    // Try enhanced vehicle command (handles typos, suggestions, etc.)
-    if (userId) {
-      console.log(`🚀 Trying enhanced vehicle command`);
+    // Try enhanced vehicle command for remaining cases
+    if (userId && !isComplexText) {
+      console.log(`🚀 Trying enhanced vehicle command for simple text`);
       const enhancedResult = await this.enhancedVehicleCommand.processMessage(userId, text);
       if (enhancedResult !== null) {
         console.log(`✅ Enhanced vehicle command handled the message`);
