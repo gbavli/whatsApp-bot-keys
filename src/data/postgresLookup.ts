@@ -8,14 +8,19 @@ export class PostgresLookup implements VehicleLookup {
   private connected = false;
 
   constructor() {
-    this.client = new Client({
-      host: process.env.PGHOST,
-      port: parseInt(process.env.PGPORT || '5432'),
-      user: process.env.PGUSER,
-      password: process.env.PGPASSWORD,
-      database: process.env.PGDATABASE,
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-    });
+    this.client = new Client(
+      process.env.DATABASE_URL ? {
+        connectionString: process.env.DATABASE_URL,
+        ssl: { rejectUnauthorized: false }
+      } : {
+        host: process.env.PGHOST,
+        port: parseInt(process.env.PGPORT || '5432'),
+        user: process.env.PGUSER,
+        password: process.env.PGPASSWORD,
+        database: process.env.PGDATABASE,
+        ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+      }
+    );
   }
 
   async connect(): Promise<void> {

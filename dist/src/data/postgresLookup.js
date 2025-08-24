@@ -7,7 +7,10 @@ class PostgresLookup {
     constructor() {
         this.data = null;
         this.connected = false;
-        this.client = new pg_1.Client({
+        this.client = new pg_1.Client(process.env.DATABASE_URL ? {
+            connectionString: process.env.DATABASE_URL,
+            ssl: { rejectUnauthorized: false }
+        } : {
             host: process.env.PGHOST,
             port: parseInt(process.env.PGPORT || '5432'),
             user: process.env.PGUSER,
