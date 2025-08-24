@@ -33,24 +33,40 @@ export class EnhancedVehicleCommand {
   
   constructor(lookup: VehicleLookup) {
     this.lookup = lookup;
-    // Load vehicle data immediately for smart parsing
-    this.loadVehicleDataImmediate();
+    // Load vehicle data in background after short delay
+    this.loadVehicleDataSafe();
   }
 
-  private async loadVehicleDataImmediate(): Promise<void> {
+  private loadVehicleDataSafe(): void {
+    // Start loading after a short delay to avoid blocking startup
+    setTimeout(async () => {
+      try {
+        console.log('🔄 Enhanced command: Loading vehicle data for smart parsing...');
+        if ('getAllVehicles' in this.lookup) {
+          this.vehicleData = await (this.lookup as any).getAllVehicles();
+          this.suggestionEngine = new VehicleSuggestionEngine(this.vehicleData);
+          console.log(`✅ Enhanced vehicle command loaded ${this.vehicleData.length} vehicles with intelligent parsing`);
+        } else {
+          console.log('⚠️ Enhanced command: Lookup does not support getAllVehicles');
+        }
+      } catch (error) {
+        console.error('❌ Enhanced command: Failed to load vehicle data:', error);
+        // Don't crash, continue with limited functionality
+        console.log('ℹ️ Enhanced command: Will work with basic parsing only');
+      }
+    }, 1000); // Wait 1 second after startup
+  }
+
+  private async loadVehicleDataNow(): Promise<void> {
     try {
-      console.log('🔄 Enhanced command: Loading vehicle data for smart parsing...');
-      if ('getAllVehicles' in this.lookup) {
+      if ('getAllVehicles' in this.lookup && this.vehicleData.length === 0) {
+        console.log('⚡ Enhanced command: Loading data on-demand...');
         this.vehicleData = await (this.lookup as any).getAllVehicles();
         this.suggestionEngine = new VehicleSuggestionEngine(this.vehicleData);
-        console.log(`✅ Enhanced vehicle command loaded ${this.vehicleData.length} vehicles with intelligent parsing`);
-      } else {
-        console.log('⚠️ Enhanced command: Lookup does not support getAllVehicles');
+        console.log(`✅ Enhanced command: Loaded ${this.vehicleData.length} vehicles on-demand`);
       }
     } catch (error) {
-      console.error('❌ Enhanced command: Failed to load vehicle data:', error);
-      // Don't crash, continue with limited functionality
-      console.log('ℹ️ Enhanced command: Will work with basic parsing only');
+      console.error('❌ Enhanced command: Failed to load data on-demand:', error);
     }
   }
 
@@ -69,7 +85,12 @@ export class EnhancedVehicleCommand {
         return `❌ You need to search for a vehicle first.\n\nPlease send: Make Model Year\nExample: Toyota Corolla 2015`;
       }
 
-      // Try intelligent parsing with vehicle data if available
+      // Try intelligent parsing with vehicle data if available, or load it now
+      if (this.vehicleData.length === 0) {
+        console.log(`🔄 Enhanced command: No data loaded yet, trying to load now...`);
+        await this.loadVehicleDataNow();
+      }
+      
       if (this.vehicleData.length > 0) {
         console.log(`🧠 Enhanced command: Using intelligent parsing with ${this.vehicleData.length} vehicles`);
         const smartResults = smartParseVehicle(input, this.vehicleData);
