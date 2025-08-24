@@ -1,4 +1,5 @@
 export interface VehicleData {
+  id?: number; // Optional database ID for PostgreSQL
   yearRange: string;
   make: string;
   model: string;
@@ -24,4 +25,4 @@ export interface VehicleLookup {
   find(make: string, model: string, year: number): Promise<LookupResult | null>;
 }
 
-export type DataProvider = 'sheets' | 'excel';
+export type DataProvider = 'sheets' | 'excel' | 'postgres';

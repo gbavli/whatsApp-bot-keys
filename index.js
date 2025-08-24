@@ -2,6 +2,7 @@ require('dotenv/config');
 const { WhatsAppBot } = require('./dist/src/bot/whatsapp');
 const { SheetsLookup } = require('./dist/src/data/sheetsLookup');
 const { ExcelLookup } = require('./dist/src/data/excelLookup');
+const { PostgresLookup } = require('./dist/src/data/postgresLookup');
 
 async function createLookupProvider() {
   const provider = process.env.DATA_PROVIDER || 'excel';
@@ -24,8 +25,12 @@ async function createLookupProvider() {
       return new ExcelLookup(filePath);
     }
 
+    case 'postgres': {
+      return new PostgresLookup();
+    }
+
     default:
-      throw new Error(`Unknown data provider: ${provider}. Use 'sheets' or 'excel'.`);
+      throw new Error(`Unknown data provider: ${provider}. Use 'sheets', 'excel', or 'postgres'.`);
   }
 }
 
@@ -42,6 +47,8 @@ async function main() {
     if (provider === 'excel') {
       excelFilePath = process.env.EXCEL_PATH || './keys.xlsx';
       console.log('🔧 Price update commands enabled for Excel file');
+    } else if (provider === 'postgres') {
+      console.log('🔧 Price update commands enabled for PostgreSQL database');
     }
     
     const bot = new WhatsAppBot(lookup, excelFilePath);

@@ -43,13 +43,18 @@ const QRCode = __importStar(require("qrcode-terminal"));
 const format_1 = require("../logic/format");
 const intelligentParser_1 = require("../logic/intelligentParser");
 const priceUpdateCommand_1 = require("../commands/priceUpdateCommand");
+const postgresUpdateCommand_1 = require("../commands/postgresUpdateCommand");
+const postgresLookup_1 = require("../data/postgresLookup");
 class WhatsAppBot {
     constructor(lookup, excelFilePath) {
         this.vehicleData = [];
         this.lookup = lookup;
         this.loadVehicleData();
-        // Initialize price update command if Excel file path is provided
-        if (excelFilePath) {
+        // Initialize appropriate price update command based on lookup type
+        if (lookup instanceof postgresLookup_1.PostgresLookup) {
+            this.priceUpdateCommand = new postgresUpdateCommand_1.PostgresUpdateCommand(lookup);
+        }
+        else if (excelFilePath) {
             this.priceUpdateCommand = new priceUpdateCommand_1.PriceUpdateCommand(lookup, excelFilePath);
         }
     }

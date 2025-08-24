@@ -16,18 +16,22 @@ import {
 } from '../logic/format';
 import { smartParseVehicle, SmartParseResult } from '../logic/intelligentParser';
 import { PriceUpdateCommand } from '../commands/priceUpdateCommand';
+import { PostgresUpdateCommand } from '../commands/postgresUpdateCommand';
+import { PostgresLookup } from '../data/postgresLookup';
 
 export class WhatsAppBot {
   private lookup: VehicleLookup;
   private vehicleData: VehicleData[] = [];
-  private priceUpdateCommand?: PriceUpdateCommand;
+  private priceUpdateCommand?: PriceUpdateCommand | PostgresUpdateCommand;
 
   constructor(lookup: VehicleLookup, excelFilePath?: string) {
     this.lookup = lookup;
     this.loadVehicleData();
     
-    // Initialize price update command if Excel file path is provided
-    if (excelFilePath) {
+    // Initialize appropriate price update command based on lookup type
+    if (lookup instanceof PostgresLookup) {
+      this.priceUpdateCommand = new PostgresUpdateCommand(lookup);
+    } else if (excelFilePath) {
       this.priceUpdateCommand = new PriceUpdateCommand(lookup, excelFilePath);
     }
   }
