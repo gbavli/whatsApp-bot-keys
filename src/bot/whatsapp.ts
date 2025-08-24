@@ -20,6 +20,7 @@ import { PostgresUpdateCommand } from '../commands/postgresUpdateCommand';
 import { PostgresLookup } from '../data/postgresLookup';
 import { EnhancedVehicleCommand } from '../commands/enhancedVehicleCommand';
 import { InteractiveVehicleCommand } from '../commands/interactiveVehicleCommand';
+import { AddVehicleCommand } from '../commands/addVehicleCommand';
 
 export class WhatsAppBot {
   private lookup: VehicleLookup;
@@ -27,6 +28,7 @@ export class WhatsAppBot {
   private priceUpdateCommand?: PriceUpdateCommand | PostgresUpdateCommand;
   private enhancedVehicleCommand: EnhancedVehicleCommand;
   private interactiveCommand: InteractiveVehicleCommand;
+  private addVehicleCommand: AddVehicleCommand;
 
   constructor(lookup: VehicleLookup, excelFilePath?: string) {
     this.lookup = lookup;
@@ -52,6 +54,21 @@ export class WhatsAppBot {
       // Create a minimal fallback
       this.interactiveCommand = {
         processMessage: async () => null
+      } as any;
+    }
+
+    // Initialize add vehicle command system
+    try {
+      this.addVehicleCommand = new AddVehicleCommand(lookup);
+      console.log('✅ Add vehicle command initialized');
+    } catch (error) {
+      console.error('❌ Failed to initialize add vehicle command:', error);
+      // Create a minimal fallback
+      this.addVehicleCommand = {
+        processMessage: async () => null,
+        canStartAddVehicle: () => false,
+        isInAddVehicleFlow: () => false,
+        startAddVehicle: () => 'Add vehicle not available'
       } as any;
     }
     
@@ -184,6 +201,16 @@ export class WhatsAppBot {
         return this.priceUpdateCommand.processCommand(userId, text);
       }
     }
+
+    // Handle add vehicle flow
+    if (userId && this.addVehicleCommand.isInAddVehicleFlow(userId)) {
+      console.log(`🆕 Processing add vehicle flow`);
+      const addResult = await this.addVehicleCommand.processMessage(userId, text);
+      if (addResult !== null) {
+        console.log(`✅ Add vehicle command handled the message`);
+        return addResult;
+      }
+    }
     
     // Skip greetings
     if (text.toLowerCase().match(/^(hi|hello|hey|test)$/i)) {
@@ -226,6 +253,19 @@ export class WhatsAppBot {
       console.log(`➡️ Enhanced command didn't handle message, trying fallback`);
     }
     
+    // Check if user wants to add a new vehicle
+    if (userId && this.addVehicleCommand.canStartAddVehicle(text)) {
+      console.log(`🆕 User wants to add a vehicle`);
+      // Check if we have pending vehicle info from a previous search
+      const pending = (this as any).pendingAddVehicle;
+      if (pending && pending.userId === userId) {
+        console.log(`📋 Using pending vehicle info: ${pending.make} ${pending.model} ${pending.year}`);
+        (this as any).pendingAddVehicle = null; // Clear pending
+        return this.addVehicleCommand.startAddVehicle(userId, pending.make, pending.model, pending.year);
+      }
+      return this.addVehicleCommand.startAddVehicle(userId);
+    }
+
     // Fallback to simple parsing for basic cases
     console.log(`📝 Trying simple parsing fallback...`);
     const parsed = parseUserInput(text);
@@ -239,10 +279,21 @@ export class WhatsAppBot {
       
       if (result) {
         return formatVehicleResult(result);
+      } else {
+        // Vehicle not found - offer to add it
+        if (userId) {
+          console.log(`❌ Vehicle not found, offering to add: ${make} ${model} ${year}`);
+          // Store the vehicle info for potential addition
+          (this as any).pendingAddVehicle = { userId, make, model, year };
+          return `No matching record found for ${make} ${model} ${year}.\n\n` +
+                 `💡 **Want to add this vehicle?**\n` +
+                 `Reply "add" to add ${make} ${model} ${year} to the database.\n\n` +
+                 `Or try sending just the make (e.g., "${make}") to see available models.`;
+        }
       }
     }
 
     console.log(`❌ No match found for: "${text}"`);
-    return 'No matching record found.\n\n💡 **TIP:** Try sending just the make (e.g., "Toyota") to see available models!';
+    return 'No matching record found.\n\n💡 **TIP:** Try sending just the make (e.g., "Toyota") to see available models!\n\nOr reply "add" to add a new vehicle.';
   }
 }
