@@ -8,9 +8,10 @@
   },
   "scripts": {
     "dev": "ts-node src/index.ts",
-    "start": "node index-diagnose.js",
+    "start": "node start.js",
     "start-minimal": "node index-minimal.js",
     "start-full": "node index.js",
+    "setup-db": "node setup-database.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",

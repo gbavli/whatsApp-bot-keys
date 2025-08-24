@@ -7,21 +7,9 @@ class PostgresLookup {
     constructor() {
         this.data = null;
         this.connected = false;
-        this.client = new pg_1.Client(process.env.DATABASE_URL ? {
+        this.client = new pg_1.Client({
             connectionString: process.env.DATABASE_URL,
             ssl: { rejectUnauthorized: false },
-            // Add connection optimizations
-            connectionTimeoutMillis: 10000, // 10 second timeout
-            query_timeout: 30000, // 30 second query timeout
-            statement_timeout: 30000, // 30 second statement timeout
-        } : {
-            host: process.env.PGHOST,
-            port: parseInt(process.env.PGPORT || '5432'),
-            user: process.env.PGUSER,
-            password: process.env.PGPASSWORD,
-            database: process.env.PGDATABASE,
-            ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-            // Add connection optimizations  
             connectionTimeoutMillis: 10000,
             query_timeout: 30000,
             statement_timeout: 30000,

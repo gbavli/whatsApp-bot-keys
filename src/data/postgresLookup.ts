@@ -8,27 +8,13 @@ export class PostgresLookup implements VehicleLookup {
   private connected = false;
 
   constructor() {
-    this.client = new Client(
-      process.env.DATABASE_URL ? {
-        connectionString: process.env.DATABASE_URL,
-        ssl: { rejectUnauthorized: false },
-        // Add connection optimizations
-        connectionTimeoutMillis: 10000, // 10 second timeout
-        query_timeout: 30000, // 30 second query timeout
-        statement_timeout: 30000, // 30 second statement timeout
-      } : {
-        host: process.env.PGHOST,
-        port: parseInt(process.env.PGPORT || '5432'),
-        user: process.env.PGUSER,
-        password: process.env.PGPASSWORD,
-        database: process.env.PGDATABASE,
-        ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-        // Add connection optimizations  
-        connectionTimeoutMillis: 10000,
-        query_timeout: 30000,
-        statement_timeout: 30000,
-      }
-    );
+    this.client = new Client({
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false },
+      connectionTimeoutMillis: 10000,
+      query_timeout: 30000,
+      statement_timeout: 30000,
+    });
   }
 
   async connect(): Promise<void> {

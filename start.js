@@ -1,9 +1,9 @@
-// Database setup script for new PostgreSQL service - Updated 2025-08-24
+// Fresh database setup script to avoid Railway cache
 require('dotenv/config');
 const { Client } = require('pg');
 const XLSX = require('xlsx');
 
-console.log('🚀 Setting up PostgreSQL database...');
+console.log('🚀 FRESH DATABASE SETUP - No Cache!');
 
 async function setupDatabase() {
   console.log('🔍 Environment check:');
