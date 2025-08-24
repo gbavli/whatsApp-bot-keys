@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "ts-node src/index.ts",
-    "start": "node index-simple.js",
+    "start": "node index-minimal-safe.js",
     "start-minimal": "node index-minimal.js",
     "start-full": "node index.js",
     "test": "vitest run",
