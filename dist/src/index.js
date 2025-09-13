@@ -28,6 +28,25 @@ async function main() {
     try {
         console.log('🚀 Starting WhatsApp Vehicle Pricing Bot...');
         console.log(`📊 Data Provider: ${process.env.DATA_PROVIDER || 'sheets'}`);
+        // Clear session if CLEAR_SESSION=true environment variable is set
+        if (process.env.CLEAR_SESSION === 'true') {
+            console.log('🔄 CLEAR_SESSION flag detected - clearing WhatsApp session...');
+            const fs = require('fs');
+            const path = require('path');
+            const authPath = './auth';
+            if (fs.existsSync(authPath)) {
+                const files = fs.readdirSync(authPath);
+                files.forEach((file) => {
+                    const filePath = path.join(authPath, file);
+                    fs.unlinkSync(filePath);
+                    console.log(`🗑️ Deleted session file: ${file}`);
+                });
+                console.log('✅ Session cleared! New QR code will be generated.');
+            }
+            else {
+                console.log('📁 No session files found to clear.');
+            }
+        }
         const lookup = await createLookupProvider();
         const bot = new whatsapp_1.WhatsAppBot(lookup);
         console.log('📱 Initializing WhatsApp connection...');
