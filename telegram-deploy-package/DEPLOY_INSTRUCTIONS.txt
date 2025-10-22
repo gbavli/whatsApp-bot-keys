@@ -1,0 +1,30 @@
+TELEGRAM BOT DEPLOYMENT INSTRUCTIONS
+=====================================
+
+🎯 GOAL: Fix Railway deployment by uploading these files to GitHub
+
+📁 FILES TO UPLOAD:
+- telegram-start.js (Railway start script)
+- railway.toml (Railway configuration)
+- dist/ (compiled TypeScript files)
+- package.json (updated dependencies)
+
+🚀 UPLOAD STEPS:
+1. Go to: https://github.com/gbavli/whatsApp-bot-keys
+2. Upload each file to the root directory
+3. Railway will automatically detect changes and redeploy
+
+✅ EXPECTED RESULT:
+- Railway deployment will succeed
+- Telegram bot will start with PostgreSQL
+- Price updates will work fully!
+
+🤖 Your bot: @KeyPricingBot
+Token: 8241961782:AAH9i6LbchOh23pGzAkCLiPmPwH5iFRQOGo
+
+📱 TEST AFTER DEPLOYMENT:
+1. Message @KeyPricingBot in Telegram
+2. Send: chevrolet malibu 2014
+3. Press: 9 (pricing mode)
+4. Try: 2 180 (update Remote Min price)
+5. Should work with PostgreSQL! ✅

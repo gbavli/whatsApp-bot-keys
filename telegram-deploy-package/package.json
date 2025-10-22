@@ -1,0 +1,51 @@
+{
+  "name": "whatsapp-bot",
+  "version": "1.0.2",
+  "description": "",
+  "main": "index.js",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "dev": "ts-node src/index.ts",
+    "start": "node telegram-start.js",
+    "telegram": "ts-node src/telegram-index.ts",
+    "telegram:prod": "node dist/src/telegram-index.js",
+    "start-minimal": "node index-minimal.js",
+    "start-full": "node index.js",
+    "setup-db": "node setup-database.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/pg": "^8.15.5",
+    "@types/qrcode-terminal": "^0.12.2",
+    "@typescript-eslint/eslint-plugin": "^8.39.1",
+    "@typescript-eslint/parser": "^8.39.1",
+    "eslint": "^9.33.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "prettier": "^3.6.2",
+    "vitest": "^2.0.0"
+  },
+  "dependencies": {
+    "@types/node": "^24.3.0",
+    "@whiskeysockets/baileys": "^6.7.18",
+    "axios": "^1.12.2",
+    "dotenv": "^17.2.1",
+    "google-auth-library": "^10.2.1",
+    "googleapis": "^156.0.0",
+    "pg": "^8.16.3",
+    "pino": "^8.17.0",
+    "qrcode-terminal": "^0.12.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2",
+    "xlsx": "^0.18.5"
+  }
+}

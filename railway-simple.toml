@@ -1,0 +1,8 @@
+[build]
+command = "npm install"
+
+[deploy]
+startCommand = "node bot-final.js"
+
+[env]
+NODE_ENV = "production"

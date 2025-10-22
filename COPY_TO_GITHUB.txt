@@ -1,0 +1,47 @@
+COPY THIS CONTENT TO railway-simple-start.js in GitHub:
+=======================================================
+
+// Simple Railway start script that doesn't rely on complex builds
+require('dotenv/config');
+
+console.log('🤖 Starting Telegram Bot - Simple Railway Version');
+
+// Import compiled modules
+async function startTelegramBot() {
+  try {
+    const { TelegramBot } = require('./dist/src/bot/telegram');
+    const { getVehicleLookup } = require('./dist/src/data/providerFactory');
+
+    const botToken = process.env.BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN;
+    if (!botToken) {
+      console.error('❌ BOT_TOKEN not found');
+      process.exit(1);
+    }
+
+    console.log('🔑 Using bot token from:', process.env.BOT_TOKEN ? 'BOT_TOKEN' : 'TELEGRAM_BOT_TOKEN');
+
+    console.log('📊 Connecting to database...');
+    const lookup = await getVehicleLookup();
+    
+    console.log('🚀 Starting bot...');
+    const bot = new TelegramBot(lookup, botToken);
+    await bot.start();
+    
+    console.log('✅ Telegram bot running successfully!');
+  } catch (error) {
+    console.error('❌ Bot failed:', error.message);
+    console.error('Full error:', error);
+    process.exit(1);
+  }
+}
+
+startTelegramBot();
+
+=======================================================
+INSTRUCTIONS:
+1. Go to: https://github.com/gbavli/whatsApp-bot-keys
+2. Find and edit: railway-simple-start.js  
+3. Replace ALL content with the code above
+4. Commit changes
+5. Railway will auto-deploy and use BOT_TOKEN (bypassing cache!)
+=======================================================

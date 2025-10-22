@@ -1,0 +1,9 @@
+[build]
+command = "rm -rf dist && npm install && npx tsc"
+
+[deploy]
+startCommand = "node telegram-bot-start.js"
+
+[env]
+DATA_PROVIDER = "postgres"
+NODE_ENV = "production"

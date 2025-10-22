@@ -1,0 +1,8 @@
+[build]
+command = "npx tsc"
+
+[deploy]
+startCommand = "node telegram-start.js"
+
+[env]
+TELEGRAM_BOT_TOKEN = "8241961782:AAH9i6LbchOh23pGzAkCLiPmPwH5iFRQOGo"
