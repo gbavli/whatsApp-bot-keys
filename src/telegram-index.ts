@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { TelegramBot } from './bot/telegram';
-import { PostgresLookup } from './data/postgresLookup';
+import { getVehicleLookup } from './data/providerFactory';
 
 async function main(): Promise<void> {
   try {
@@ -14,7 +14,7 @@ async function main(): Promise<void> {
 
     // Initialize database lookup
     console.log('📊 Initializing database connection...');
-    const lookup = new PostgresLookup();
+    const lookup = await getVehicleLookup();
 
     // Create and start Telegram bot
     console.log('🚀 Creating Telegram bot...');
