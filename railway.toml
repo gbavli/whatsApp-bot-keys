@@ -2,7 +2,7 @@
 command = "npm install"
 
 [deploy]
-startCommand = "node bot-improved.js"
+startCommand = "node bot-debug.js"
 
 [env]
 NODE_ENV = "production"
