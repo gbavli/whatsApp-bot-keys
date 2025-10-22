@@ -2,7 +2,7 @@
 const axios = require('axios');
 const { Client } = require('pg');
 
-const BOT_TOKEN = '8241961782:AAF6IQFSBL91Sd-8t0futKNceR_l519NzsU';
+const BOT_TOKEN = '8241961782:AAH9i6LbchOh23pGzAkCLiPmPwH5iFRQOGo';
 
 console.log('🔍 AUTO-DETECTING Railway DATABASE...');
 
