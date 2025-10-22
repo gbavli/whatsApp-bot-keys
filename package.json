@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "ts-node src/index.ts",
-    "start": "node index-diagnose.js",
+    "start": "node dist/src/index.js",
     "start-minimal": "node index-minimal.js",
     "start-full": "node index.js",
     "setup-db": "node setup-database.js",
