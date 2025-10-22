@@ -9,11 +9,13 @@ async function startTelegramBot() {
     const { TelegramBot } = require('./dist/src/bot/telegram');
     const { getVehicleLookup } = require('./dist/src/data/providerFactory');
 
-    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    const botToken = process.env.BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN;
     if (!botToken) {
-      console.error('❌ TELEGRAM_BOT_TOKEN not found');
+      console.error('❌ BOT_TOKEN not found');
       process.exit(1);
     }
+
+    console.log('🔑 Using bot token from:', process.env.BOT_TOKEN ? 'BOT_TOKEN' : 'TELEGRAM_BOT_TOKEN');
 
     console.log('📊 Connecting to database...');
     const lookup = await getVehicleLookup();
