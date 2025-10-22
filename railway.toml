@@ -6,3 +6,4 @@ startCommand = "node bot-improved.js"
 
 [env]
 NODE_ENV = "production"
+DATABASE_URL = "postgresql://postgres:isRxzsszifQZEcxCgiBwJtVBEpgIaIbZ@postgres.railway.internal:5432/railway"
