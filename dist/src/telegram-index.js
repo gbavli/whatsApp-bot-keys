@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 require("dotenv/config");
 const telegram_1 = require("./bot/telegram");
-const postgresLookup_1 = require("./data/postgresLookup");
+const providerFactory_1 = require("./data/providerFactory");
 async function main() {
     try {
         console.log('🤖 Starting Telegram Vehicle Pricing Bot...');
@@ -13,7 +13,7 @@ async function main() {
         }
         // Initialize database lookup
         console.log('📊 Initializing database connection...');
-        const lookup = new postgresLookup_1.PostgresLookup();
+        const lookup = await (0, providerFactory_1.getVehicleLookup)();
         // Create and start Telegram bot
         console.log('🚀 Creating Telegram bot...');
         const bot = new telegram_1.TelegramBot(lookup, botToken);
