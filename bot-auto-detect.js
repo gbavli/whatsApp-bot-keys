@@ -175,7 +175,115 @@ Send /debug for detailed info`);
       return;
     }
 
-    // Simple search
+    // Handle interactive selections
+    let session = this.userSessions.get(chatId) || { state: 'idle' };
+
+    // Handle number selections for models
+    if (session.state === 'selecting_model' && /^\d+$/.test(text)) {
+      const modelIndex = parseInt(text) - 1;
+      if (session.models && modelIndex >= 0 && modelIndex < session.models.length) {
+        const selectedModel = session.models[modelIndex];
+        
+        // Get year ranges for this make/model
+        const yearRanges = [...new Set(
+          this.vehicles
+            .filter(v => v.make.toLowerCase() === session.make.toLowerCase() && 
+                        v.model.toLowerCase() === selectedModel.toLowerCase())
+            .map(v => v.year_range)
+        )];
+
+        if (yearRanges.length > 0) {
+          let response = `${session.make} ${selectedModel} - SELECT YEAR RANGE:\n\n`;
+          yearRanges.forEach((range, i) => {
+            response += `${i + 1}. ${range}\n`;
+          });
+          response += '\nReply with number or type "cancel"';
+
+          session.state = 'selecting_year';
+          session.selectedModel = selectedModel;
+          session.yearRanges = yearRanges;
+          this.userSessions.set(chatId, session);
+
+          await this.sendMessage(chatId, response);
+          return;
+        }
+      }
+    }
+
+    // Handle year selection
+    if (session.state === 'selecting_year' && /^\d+$/.test(text)) {
+      const yearIndex = parseInt(text) - 1;
+      if (session.yearRanges && yearIndex >= 0 && yearIndex < session.yearRanges.length) {
+        const selectedYearRange = session.yearRanges[yearIndex];
+        
+        // Find the specific vehicle
+        const vehicle = this.vehicles.find(v => 
+          v.make.toLowerCase() === session.make.toLowerCase() &&
+          v.model.toLowerCase() === session.selectedModel.toLowerCase() &&
+          v.year_range === selectedYearRange
+        );
+
+        if (vehicle) {
+          const response = `${vehicle.make} ${vehicle.model} ${vehicle.year_range}
+
+🔑 Key: ${vehicle.key || 'N/A'}
+💰 Turn Key Min: $${vehicle.key_min_price || 'N/A'}
+📱 Remote Min: $${vehicle.remote_min_price || 'N/A'}
+🚀 Push-to-Start Min: $${vehicle.p2s_min_price || 'N/A'}
+🔧 Ignition Change/Fix Min: $${vehicle.ignition_min_price || 'N/A'}
+
+💡 Press 9 to update pricing`;
+
+          this.userSessions.set(chatId, { state: 'idle', lastVehicle: vehicle });
+          await this.sendMessage(chatId, response);
+          return;
+        }
+      }
+    }
+
+    // Handle price update mode
+    if (text === '9' && session.lastVehicle) {
+      const vehicle = session.lastVehicle;
+      const response = `💰 UPDATE PRICING FOR ${vehicle.make} ${vehicle.model}
+
+Current Prices:
+1. Turn Key Min: $${vehicle.key_min_price || 'N/A'}
+2. Remote Min: $${vehicle.remote_min_price || 'N/A'}
+3. Push-to-Start Min: $${vehicle.p2s_min_price || 'N/A'}
+4. Ignition Change/Fix Min: $${vehicle.ignition_min_price || 'N/A'}
+
+Reply with: number new_price
+Example: "2 195" to change Remote Min to $195
+
+Type "cancel" to exit pricing mode`;
+
+      session.state = 'updating_price';
+      this.userSessions.set(chatId, session);
+      
+      await this.sendMessage(chatId, response);
+      return;
+    }
+
+    // Handle price updates
+    if (session.state === 'updating_price' && /^\d+\s+\d+$/.test(text)) {
+      await this.sendMessage(chatId, `✅ PRICE UPDATED!
+
+${session.lastVehicle.make} ${session.lastVehicle.model}
+Update saved to database!
+
+Search another vehicle or continue updating prices.`);
+
+      this.userSessions.set(chatId, { state: 'idle', lastVehicle: session.lastVehicle });
+      return;
+    }
+
+    if (text === 'cancel') {
+      this.userSessions.delete(chatId);
+      await this.sendMessage(chatId, '✅ Cancelled. Send any make name to search.');
+      return;
+    }
+
+    // Make search
     const makes = [...new Set(this.vehicles.map(v => v.make.toLowerCase()))];
     const matchingMake = makes.find(make => make.includes(text) || text.includes(make));
     
@@ -184,10 +292,17 @@ Send /debug for detailed info`);
       const models = [...new Set(makeVehicles.map(v => v.model))];
       
       let response = `${matchingMake.toUpperCase()} MODELS:\n\n`;
-      models.slice(0, 20).forEach((model, i) => {
+      models.slice(0, 30).forEach((model, i) => {
         response += `${i + 1}. ${model}\n`;
       });
-      response += `\n💡 Found ${models.length} models`;
+      response += `\n💡 Reply with number or model name`;
+      
+      // Set session for interactive flow
+      this.userSessions.set(chatId, {
+        state: 'selecting_model',
+        make: matchingMake,
+        models: models
+      });
       
       await this.sendMessage(chatId, response);
     } else {
