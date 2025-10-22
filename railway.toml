@@ -1,8 +1,10 @@
 [build]
-command = "npx tsc"
+command = "npm install && npx tsc"
 
 [deploy]
-startCommand = "node telegram-start.js"
+startCommand = "node railway-simple-start.js"
 
 [env]
 TELEGRAM_BOT_TOKEN = "8241961782:AAH9i6LbchOh23pGzAkCLiPmPwH5iFRQOGo"
+DATA_PROVIDER = "postgres"
+NODE_ENV = "production"
