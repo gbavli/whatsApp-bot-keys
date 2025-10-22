@@ -8,7 +8,9 @@
   },
   "scripts": {
     "dev": "ts-node src/index.ts",
-    "start": "node dist/src/index.js",
+    "start": "node telegram-start.js",
+    "telegram": "ts-node src/telegram-index.ts",
+    "telegram:prod": "node dist/src/telegram-index.js",
     "start-minimal": "node index-minimal.js",
     "start-full": "node index.js",
     "setup-db": "node setup-database.js",
@@ -35,6 +37,7 @@
   "dependencies": {
     "@types/node": "^24.3.0",
     "@whiskeysockets/baileys": "^6.7.18",
+    "axios": "^1.12.2",
     "dotenv": "^17.2.1",
     "google-auth-library": "^10.2.1",
     "googleapis": "^156.0.0",
