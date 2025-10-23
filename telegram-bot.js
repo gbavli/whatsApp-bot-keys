@@ -20,10 +20,18 @@ class VehiclePricingBot {
       process.env.DATABASE_URL,
       process.env.POSTGRES_URL,
       process.env.POSTGRESQL_URL,
-      process.env.DB_URL
+      process.env.DB_URL,
+      process.env.POSTGRES_DATABASE_URL,
+      process.env.railway_DATABASE_URL
     ].filter(Boolean);
 
     console.log('🔍 Looking for database connection...');
+    console.log('🔍 Available env vars:', possibleUrls.length);
+    possibleUrls.forEach((url, i) => {
+      if (url) {
+        console.log(`  Option ${i + 1}: ${url.substring(0, 30)}...`);
+      }
+    });
     
     for (const url of possibleUrls) {
       try {
