@@ -133,6 +133,7 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
 
     // Get or create session
     let session = this.userSessions.get(userId) || { state: 'idle' };
+    console.log(`🎯 Session state for ${userId}: ${session.state}`);
 
     // Handle price update mode
     if (session.state === 'updating_price') {
@@ -160,7 +161,7 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
       return this.showPriceUpdateMenu(session.vehicleData);
     }
 
-    // Parse new vehicle request
+    // If not in any session state, parse new vehicle request
     const parsed = this.parseUserInput(text);
     if (!parsed) {
       return 'Please send: Make Model Year (e.g., "Toyota Corolla 2015")';
