@@ -142,11 +142,13 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
 
     // Handle model selection
     if (session.state === 'selecting_model') {
+      console.log(`🎯 Handling model selection: "${text}"`);
       return await this.handleModelSelection(userId, text);
     }
 
     // Handle year selection  
     if (session.state === 'selecting_year') {
+      console.log(`🎯 Handling year selection: "${text}"`);
       return await this.handleYearSelection(userId, text);
     }
 
@@ -691,6 +693,8 @@ update pricing ? press 9`;
     const session = this.getSession(userId);
     Object.assign(session, updates);
     session.lastActivity = new Date();
+    this.userSessions.set(userId, session);
+    console.log(`🎯 Updated session for ${userId}:`, { state: session.state, make: session.make, models: session.models?.length });
   }
 
   isExitCommand(text) {
