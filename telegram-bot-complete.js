@@ -134,6 +134,14 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
     // Get or create session
     let session = this.userSessions.get(userId) || { state: 'idle' };
     console.log(`🎯 Session state for ${userId}: ${session.state}`);
+    console.log(`🎯 Has vehicleData: ${!!session.vehicleData}`);
+
+    // Handle price update trigger (9) - CHECK THIS FIRST before session states
+    if (text === '9' && session.vehicleData) {
+      console.log(`🎯 Price update triggered by "${text}"`);
+      this.updateSession(userId, { state: 'updating_price' });
+      return this.showPriceUpdateMenu(session.vehicleData);
+    }
 
     // Handle price update mode
     if (session.state === 'updating_price') {
@@ -155,12 +163,6 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
     // Handle vehicle selection for pricing
     if (session.state === 'selecting_vehicle_for_pricing') {
       return this.handleVehicleSelectionForPricing(userId, text);
-    }
-
-    // Handle price update trigger (9)
-    if (text === '9' && session.vehicleData) {
-      this.updateSession(userId, { state: 'updating_price' });
-      return this.showPriceUpdateMenu(session.vehicleData);
     }
 
     // If not in any session state, parse new vehicle request
@@ -270,8 +272,10 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
   }
 
   async handleModelSelection(userId, selection) {
-    const session = this.getSession(userId);
-    if (!session.models || !session.make) {
+    const session = this.userSessions.get(userId);
+    if (!session || !session.models || !session.make) {
+      console.log(`❌ Model selection: No valid session found for ${userId}`);
+      console.log(`❌ Session data:`, session);
       return 'Session expired. Please start over.';
     }
 
@@ -324,8 +328,10 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
   }
 
   async handleYearSelection(userId, selection) {
-    const session = this.getSession(userId);
-    if (!session.yearRanges || !session.make || !session.model) {
+    const session = this.userSessions.get(userId);
+    if (!session || !session.yearRanges || !session.make || !session.model) {
+      console.log(`❌ Year selection: No valid session found for ${userId}`);
+      console.log(`❌ Session data:`, session);
       return 'Session expired. Please start over.';
     }
 
@@ -370,8 +376,10 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
   }
 
   handleVehicleSelectionForPricing(userId, selection) {
-    const session = this.getSession(userId);
-    if (!session.vehicleOptions || !session.make || !session.model) {
+    const session = this.userSessions.get(userId);
+    if (!session || !session.vehicleOptions || !session.make || !session.model) {
+      console.log(`❌ Vehicle selection: No valid session found for ${userId}`);
+      console.log(`❌ Session data:`, session);
       return 'Session expired. Please start over.';
     }
 
@@ -409,8 +417,8 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
   }
 
   async handlePriceUpdate(userId, text) {
-    const session = this.getSession(userId);
-    if (!session.vehicleData) {
+    const session = this.userSessions.get(userId);
+    if (!session || !session.vehicleData) {
       this.updateSession(userId, { state: 'idle' });
       return 'Session expired. Please start over.';
     }
