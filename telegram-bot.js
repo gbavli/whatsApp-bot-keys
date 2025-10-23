@@ -2,7 +2,7 @@
 const axios = require('axios');
 const { Client } = require('pg');
 
-const BOT_TOKEN = '8278468804:AAH-32P_K0HA_iWr1WcTJsraqViOXMSNQgw';
+const BOT_TOKEN = '8241961782:AAF6IQFSBL91Sd-8t0futKNceR_l519NzsU';
 
 class VehiclePricingBot {
   constructor() {
@@ -15,54 +15,57 @@ class VehiclePricingBot {
   }
 
   async loadVehicles() {
-    // Try to connect to database from environment
-    const possibleUrls = [
-      process.env.DATABASE_URL,
-      process.env.POSTGRES_URL,
-      process.env.POSTGRESQL_URL,
-      process.env.DB_URL,
-      process.env.POSTGRES_DATABASE_URL,
-      process.env.railway_DATABASE_URL
-    ].filter(Boolean);
-
-    console.log('🔍 Looking for database connection...');
-    console.log('🔍 Available env vars:', possibleUrls.length);
-    possibleUrls.forEach((url, i) => {
-      if (url) {
-        console.log(`  Option ${i + 1}: ${url.substring(0, 30)}...`);
-      }
-    });
+    console.log('🔍 Environment check:');
+    console.log('  DATA_PROVIDER:', process.env.DATA_PROVIDER);
+    console.log('  NODE_ENV:', process.env.NODE_ENV);
+    console.log('  DATABASE_URL exists:', !!process.env.DATABASE_URL);
     
-    for (const url of possibleUrls) {
-      try {
-        const client = new Client({
-          connectionString: url,
-          ssl: { rejectUnauthorized: false }
-        });
-        
-        await client.connect();
-        const result = await client.query('SELECT * FROM vehicles ORDER BY make, model, year_range');
-        this.vehicles = result.rows;
-        await client.end();
-        
-        this.databaseUrl = url;
-        console.log(`✅ Connected to database: ${this.vehicles.length} vehicles loaded`);
-        return;
-        
-      } catch (error) {
-        console.log(`❌ Database connection failed: ${error.message}`);
-      }
+    const DATABASE_URL = process.env.DATABASE_URL;
+    
+    if (!DATABASE_URL) {
+      console.log('❌ No DATABASE_URL found in environment');
+      console.log('🔄 Using sample data');
+      this.vehicles = [
+        { make: 'Toyota', model: 'Corolla', year_range: '2020-2024', key: 'TOY43', key_min_price: '150', remote_min_price: '200', p2s_min_price: '300', ignition_min_price: '250' },
+        { make: 'Toyota', model: 'Camry', year_range: '2018-2023', key: 'TOY44', key_min_price: '160', remote_min_price: '210', p2s_min_price: '320', ignition_min_price: '270' },
+        { make: 'Honda', model: 'Civic', year_range: '2019-2024', key: 'HON12', key_min_price: '140', remote_min_price: '190', p2s_min_price: '290', ignition_min_price: '240' },
+        { make: 'Honda', model: 'Accord', year_range: '2017-2022', key: 'HON13', key_min_price: '170', remote_min_price: '220', p2s_min_price: '340', ignition_min_price: '280' },
+        { make: 'Chevrolet', model: 'Malibu', year_range: '2016-2021', key: 'CHV98', key_min_price: '130', remote_min_price: '180', p2s_min_price: '280', ignition_min_price: '230' }
+      ];
+      return;
     }
 
-    // Fallback to sample data for testing
-    console.log('🔄 Using sample data - no database connection');
-    this.vehicles = [
-      { make: 'Toyota', model: 'Corolla', year_range: '2020-2024', key: 'TOY43', key_min_price: '150', remote_min_price: '200', p2s_min_price: '300', ignition_min_price: '250' },
-      { make: 'Toyota', model: 'Camry', year_range: '2018-2023', key: 'TOY44', key_min_price: '160', remote_min_price: '210', p2s_min_price: '320', ignition_min_price: '270' },
-      { make: 'Honda', model: 'Civic', year_range: '2019-2024', key: 'HON12', key_min_price: '140', remote_min_price: '190', p2s_min_price: '290', ignition_min_price: '240' },
-      { make: 'Honda', model: 'Accord', year_range: '2017-2022', key: 'HON13', key_min_price: '170', remote_min_price: '220', p2s_min_price: '340', ignition_min_price: '280' },
-      { make: 'Chevrolet', model: 'Malibu', year_range: '2016-2021', key: 'CHV98', key_min_price: '130', remote_min_price: '180', p2s_min_price: '280', ignition_min_price: '230' }
-    ];
+    console.log('🔍 Attempting PostgreSQL connection...');
+    console.log('🔗 Database URL preview:', DATABASE_URL.substring(0, 40) + '...');
+    
+    try {
+      const client = new Client({
+        connectionString: DATABASE_URL,
+        ssl: { rejectUnauthorized: false }
+      });
+      
+      await client.connect();
+      console.log('✅ PostgreSQL connected successfully');
+      
+      const result = await client.query('SELECT * FROM vehicles ORDER BY make, model, year_range');
+      this.vehicles = result.rows;
+      await client.end();
+      
+      this.databaseUrl = DATABASE_URL;
+      console.log(`✅ Loaded ${this.vehicles.length} vehicles from PostgreSQL`);
+      
+    } catch (error) {
+      console.error('❌ Database connection failed:', error.message);
+      console.log('🔄 Using sample data as fallback');
+      
+      this.vehicles = [
+        { make: 'Toyota', model: 'Corolla', year_range: '2020-2024', key: 'TOY43', key_min_price: '150', remote_min_price: '200', p2s_min_price: '300', ignition_min_price: '250' },
+        { make: 'Toyota', model: 'Camry', year_range: '2018-2023', key: 'TOY44', key_min_price: '160', remote_min_price: '210', p2s_min_price: '320', ignition_min_price: '270' },
+        { make: 'Honda', model: 'Civic', year_range: '2019-2024', key: 'HON12', key_min_price: '140', remote_min_price: '190', p2s_min_price: '290', ignition_min_price: '240' },
+        { make: 'Honda', model: 'Accord', year_range: '2017-2022', key: 'HON13', key_min_price: '170', remote_min_price: '220', p2s_min_price: '340', ignition_min_price: '280' },
+        { make: 'Chevrolet', model: 'Malibu', year_range: '2016-2021', key: 'CHV98', key_min_price: '130', remote_min_price: '180', p2s_min_price: '280', ignition_min_price: '230' }
+      ];
+    }
   }
 
   async sendMessage(chatId, text) {
