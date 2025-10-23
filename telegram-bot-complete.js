@@ -393,12 +393,13 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
   }
 
   showPriceUpdateMenu(vehicleData) {
+    const formatPrice = (price) => price && price.toString().trim() !== '' ? price : 'N/A';
     return `UPDATE PRICING FOR ${vehicleData.make} ${vehicleData.model}\n\n` +
            `Current Prices:\n` +
-           `1. Turn Key Min: $${vehicleData.keyMinPrice}\n` +
-           `2. Remote Min: $${vehicleData.remoteMinPrice}\n` +
-           `3. Push-to-Start Min: $${vehicleData.p2sMinPrice}\n` +
-           `4. Ignition Change/Fix Min: $${vehicleData.ignitionMinPrice}\n\n` +
+           `1. Turn Key Min: $${formatPrice(vehicleData.keyMinPrice)}\n` +
+           `2. Remote Min: $${formatPrice(vehicleData.remoteMinPrice)}\n` +
+           `3. Push-to-Start Min: $${formatPrice(vehicleData.p2sMinPrice)}\n` +
+           `4. Ignition Change/Fix Min: $${formatPrice(vehicleData.ignitionMinPrice)}\n\n` +
            `Reply with: [number] [new price]\n` +
            `Example: "1 150" to change Turn Key Min to $150\n\n` +
            `Type "cancel" to exit pricing mode`;
@@ -518,7 +519,7 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
         yearRange: vehicle.year_range,
         make: vehicle.make,
         model: vehicle.model,
-        key: vehicle.key,
+        key: vehicle.key || vehicle.key_type,
         keyMinPrice: vehicle.key_min_price,
         remoteMinPrice: vehicle.remote_min_price,
         p2sMinPrice: vehicle.p2s_min_price,
