@@ -2,7 +2,7 @@
 const axios = require('axios');
 const { Client } = require('pg');
 
-const BOT_TOKEN = '8241961782:AAF6IQFSBL91Sd-8t0futKNceR_l519NzsU';
+const BOT_TOKEN = process.env.BOT_TOKEN || '8278468804:AAH-32P_K0HA_iWr1WcTJsraqViOXMSNQgw';
 
 class VehiclePricingBot {
   constructor() {
