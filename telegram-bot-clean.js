@@ -130,10 +130,12 @@ class CleanTelegramBot {
     const text = message.text?.trim();
     const userId = chatId.toString();
     
+    console.log(`📨 [${this.instanceId}] Received: "${text}" from ${userId}`);
+    
     if (!text) return;
 
     if (text === '/start') {
-      await this.sendMessage(chatId, `🤖 Vehicle Key Pricing Bot
+      await this.sendMessage(chatId, `🤖 Vehicle Key Pricing Bot [${this.instanceId}]
 
 📊 Database: ${this.vehicles.length} vehicles loaded
 🔍 Search examples:
