@@ -136,10 +136,6 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
   }
 
   async processMessage(text, userId) {
-    console.log(`📨 Processing message: "${text}" from user ${userId}`);
-    console.log(`📊 Total active sessions: ${this.userSessions.size}`);
-    console.log(`📊 All active user IDs: [${Array.from(this.userSessions.keys()).join(', ')}]`);
-    
     // Handle exit commands
     if (this.isExitCommand(text)) {
       this.userSessions.delete(userId);
@@ -153,10 +149,17 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
 
     // Get or create session
     let session = this.userSessions.get(userId) || { state: 'idle' };
-    console.log(`🎯 Session state for ${userId}: ${session.state}`);
-    console.log(`🎯 Has vehicleData: ${!!session.vehicleData}`);
-    console.log(`🎯 Session make: ${session.make || 'none'}`);
-    console.log(`🎯 Session models count: ${session.models?.length || 0}`);
+    
+    // Simple check: if user types a make name and we're in selecting_model state, 
+    // they want to start a new search - clear the session
+    if (session.state === 'selecting_model') {
+      const potentialMakes = ['toyota', 'honda', 'ford', 'chevrolet', 'dodge', 'nissan', 'chrysler', 'jeep', 'bmw', 'mercedes', 'audi', 'lexus', 'acura', 'infiniti', 'cadillac', 'lincoln', 'buick', 'gmc', 'ram', 'subaru', 'mazda', 'mitsubishi', 'volkswagen', 'volvo', 'porsche', 'tesla', 'ferrari', 'lamborghini'];
+      if (potentialMakes.includes(text.toLowerCase())) {
+        console.log(`🔄 User typed "${text}" while in selecting_model state - starting new search`);
+        this.userSessions.delete(userId);
+        session = { state: 'idle' };
+      }
+    }
 
     // Handle price update trigger (9) - CHECK THIS FIRST before session states
     if (text === '9' && session.vehicleData) {
@@ -172,13 +175,7 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
 
     // Handle model selection
     if (session.state === 'selecting_model') {
-      console.log(`🎯 Handling model selection: "${text}"`);
-      console.log(`🎯 Session models count: ${session.models?.length || 0}`);
-      console.log(`🎯 About to call handleModelSelection...`);
-      const result = await this.handleModelSelection(userId, text);
-      console.log(`🎯 Model selection result: "${result}"`);
-      console.log(`🎯 Returning from model selection handler`);
-      return result;
+      return await this.handleModelSelection(userId, text);
     }
 
     // Handle year selection  
@@ -305,12 +302,7 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
 
   async handleModelSelection(userId, selection) {
     const session = this.userSessions.get(userId);
-    console.log(`🔍 handleModelSelection called with userId: ${userId}, selection: "${selection}"`);
-    console.log(`🔍 Current session:`, JSON.stringify(session, null, 2));
-    
     if (!session || !session.models || !session.make) {
-      console.log(`❌ Model selection: No valid session found for ${userId}`);
-      console.log(`❌ Session data:`, session);
       return 'Session expired. Please start over.';
     }
 
