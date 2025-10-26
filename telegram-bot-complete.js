@@ -161,6 +161,7 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
 
     // Get or create session
     let session = this.userSessions.get(userId) || { state: 'idle' };
+    console.log(`🔍 Session for ${userId}: state="${session.state}", models=${session.models?.length || 0}`);
     
     // Simple check: if user types a make name and we're in selecting_model state, 
     // they want to start a new search - clear the session
@@ -187,6 +188,7 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
 
     // Handle model selection
     if (session.state === 'selecting_model') {
+      console.log(`✅ In selecting_model state with ${session.models?.length || 0} models`);
       return await this.handleModelSelection(userId, text);
     }
 
