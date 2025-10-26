@@ -350,7 +350,9 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
     // Debug: Show first few Honda records
     if (make.toLowerCase() === 'honda') {
       const hondaVehicles = this.vehicles.filter(v => v.make.toLowerCase() === 'honda');
-      console.log(`🔍 [${this.instanceId}] Sample Honda vehicles:`, hondaVehicles.slice(0, 5).map(v => `${v.make} ${v.model}`));
+      console.log(`🔍 [${this.instanceId}] Total Honda vehicles found: ${hondaVehicles.length}`);
+      console.log(`🔍 [${this.instanceId}] Sample Honda vehicles:`, hondaVehicles.slice(0, 10).map(v => `${v.make} ${v.model}`));
+      console.log(`🔍 [${this.instanceId}] Unique Honda models:`, [...models].sort());
     }
     
     return modelList;
