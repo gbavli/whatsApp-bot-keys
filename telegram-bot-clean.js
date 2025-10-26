@@ -169,16 +169,22 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
     }
 
     if (text === '/sample') {
-      const sample = this.vehicles.slice(0, 3);
-      const sampleText = sample.map(v => 
-        `${v.make || 'NO_MAKE'} ${v.model || 'NO_MODEL'} (${Object.keys(v).join(', ')})`
+      const sample = this.vehicles.slice(0, 5);
+      const sampleText = sample.map((v, i) => 
+        `${i+1}. ${v.make || 'NO_MAKE'} ${v.model || 'NO_MODEL'}`
       ).join('\n');
       
-      const hondaCount = this.vehicles.filter(v => 
-        v.make && v.make.toLowerCase() === 'honda'
-      ).length;
+      const makeStats = {};
+      this.vehicles.forEach(v => {
+        if (v.make) {
+          makeStats[v.make] = (makeStats[v.make] || 0) + 1;
+        }
+      });
       
-      await this.sendMessage(chatId, `🔍 Sample vehicles:\n${sampleText}\n\nHonda vehicles: ${hondaCount}`);
+      const topMakes = Object.entries(makeStats).sort((a,b) => b[1] - a[1]).slice(0, 5);
+      const makeText = topMakes.map(([make, count]) => `${make}: ${count}`).join('\n');
+      
+      await this.sendMessage(chatId, `🔍 Sample vehicles:\n${sampleText}\n\nTop makes:\n${makeText}`);
       return;
     }
 
@@ -330,30 +336,22 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
   }
 
   async getModelsForMake(make) {
-    // If we have very few vehicles, try to reload database
-    if (this.vehicles.length < 100) {
-      console.log(`⚠️ Only ${this.vehicles.length} vehicles, reloading database...`);
-      await this.loadVehicles();
-    }
-    
     const models = new Set();
     
+    console.log(`🔍 [${this.instanceId}] Getting models for ${make} from ${this.vehicles.length} total vehicles`);
+    
+    let matchingVehicles = 0;
     this.vehicles.forEach(vehicle => {
-      if (vehicle.make.toLowerCase() === make.toLowerCase()) {
-        models.add(vehicle.model);
+      if (vehicle.make && vehicle.make.toLowerCase() === make.toLowerCase()) {
+        matchingVehicles++;
+        if (vehicle.model && vehicle.model.trim()) {
+          models.add(vehicle.model.trim());
+        }
       }
     });
 
     const modelList = Array.from(models).sort();
-    console.log(`🎯 [${this.instanceId}] Found ${modelList.length} models for ${make} (total vehicles: ${this.vehicles.length})`);
-    
-    // Debug: Show first few Honda records
-    if (make.toLowerCase() === 'honda') {
-      const hondaVehicles = this.vehicles.filter(v => v.make.toLowerCase() === 'honda');
-      console.log(`🔍 [${this.instanceId}] Total Honda vehicles found: ${hondaVehicles.length}`);
-      console.log(`🔍 [${this.instanceId}] Sample Honda vehicles:`, hondaVehicles.slice(0, 10).map(v => `${v.make} ${v.model}`));
-      console.log(`🔍 [${this.instanceId}] Unique Honda models:`, [...models].sort());
-    }
+    console.log(`🎯 [${this.instanceId}] Found ${matchingVehicles} vehicles for ${make}, extracted ${modelList.length} unique models`);
     
     return modelList;
   }
