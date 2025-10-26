@@ -13,6 +13,7 @@ class CompleteTelegramBot {
     this.databaseUrl = null;
     this.isLoading = false;
     this.processingLocks = new Map(); // Prevent concurrent processing per user
+    this.lastMessages = new Map(); // Track last message per user for deduplication
     console.log('🤖 Complete Telegram Bot Starting...');
   }
 
@@ -90,6 +91,15 @@ class CompleteTelegramBot {
     
     if (!text) return;
 
+    // Deduplicate identical messages from same user within 5 seconds
+    const lastMsg = this.lastMessages.get(userId);
+    const now = Date.now();
+    if (lastMsg && lastMsg.text === text && (now - lastMsg.timestamp) < 5000) {
+      console.log(`🔄 Duplicate message from ${userId}: "${text}" - skipping`);
+      return;
+    }
+    this.lastMessages.set(userId, { text, timestamp: now });
+
     // Check if already processing a message for this user
     if (this.processingLocks.get(userId)) {
       console.log(`⏳ Already processing message for user ${userId}, skipping...`);
@@ -125,7 +135,9 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
       }
 
       // Process the message
+      console.log(`🎯 Processing: "${text}" for user ${userId}`);
       const response = await this.processMessage(text.toLowerCase(), userId);
+      console.log(`🎯 Response: "${response ? response.substring(0, 50) + '...' : 'null'}"`);
       if (response) {
         await this.sendMessage(chatId, response);
       }
