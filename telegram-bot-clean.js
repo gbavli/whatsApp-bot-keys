@@ -428,33 +428,328 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
     return exitCommands.includes(text.toLowerCase().trim());
   }
 
-  // Placeholder methods - will add the full implementations
+  // FULL IMPLEMENTATIONS FROM WHATSAPP CODE
   async handleYearSelection(userId, selection) {
-    return "Year selection coming soon...";
+    const session = this.getSession(userId);
+    if (!session.yearRanges || !session.make || !session.model) {
+      return 'Session expired. Please start over.';
+    }
+
+    const make = session.make;
+    const model = session.model;
+
+    // Check if it's a direct year
+    const directYear = parseInt(selection, 10);
+    if (!isNaN(directYear) && directYear >= 1900 && directYear <= 2050) {
+      this.updateSession(userId, { state: 'idle' });
+      const result = this.matchVehicle(make, model, directYear);
+      if (result) {
+        const vehicleData = {
+          id: result.id,
+          yearRange: result.year_range || '',
+          make: result.make,
+          model: result.model,
+          key: result.key,
+          keyMinPrice: result.key_min_price,
+          remoteMinPrice: result.remote_min_price,
+          p2sMinPrice: result.p2s_min_price,
+          ignitionMinPrice: result.ignition_min_price
+        };
+        
+        this.updateSession(userId, { vehicleData: vehicleData });
+        return this.formatVehicleResult(result);
+      } else {
+        return `No exact match for ${make} ${model} ${directYear}.\n\nAvailable ranges: ${session.yearRanges.join(', ')}`;
+      }
+    }
+
+    // Check if it's a number selection for year range
+    const num = parseInt(selection, 10);
+    if (!isNaN(num) && num >= 1 && num <= session.yearRanges.length) {
+      const selectedRange = session.yearRanges[num - 1];
+      this.updateSession(userId, { state: 'idle' });
+      
+      return await this.showVehiclesForRange(make, model, selectedRange, userId);
+    }
+
+    return `Please enter a specific year or select a range (1-${session.yearRanges.length}).\nType "cancel" to exit`;
   }
 
   async handleFullSearch(userId, make, model, year) {
-    return "Full search coming soon...";
+    console.log(`🔎 Full search: ${make} ${model} ${year}`);
+    const result = this.matchVehicle(make, model, year);
+    
+    if (result) {
+      const vehicleData = {
+        id: result.id,
+        yearRange: result.year_range || '',
+        make: result.make,
+        model: result.model,
+        key: result.key,
+        keyMinPrice: result.key_min_price,
+        remoteMinPrice: result.remote_min_price,
+        p2sMinPrice: result.p2s_min_price,
+        ignitionMinPrice: result.ignition_min_price
+      };
+      
+      this.updateSession(userId, {
+        state: 'idle',
+        vehicleData: vehicleData
+      });
+      return this.formatVehicleResult(result);
+    } else {
+      const yearRanges = await this.getYearRangesForVehicle(make, model);
+      if (yearRanges.length > 0) {
+        return `No exact match for ${make} ${model} ${year}.\n\nAvailable years: ${yearRanges.join(', ')}\n\nTry one of these years instead.`;
+      }
+      return `No matching record found for ${make} ${model} ${year}.`;
+    }
   }
 
   handleVehicleSelectionForPricing(userId, selection) {
-    return "Vehicle pricing coming soon...";
+    const session = this.getSession(userId);
+    if (!session.vehicleOptions || !session.make || !session.model) {
+      return 'Session expired. Please start over.';
+    }
+
+    const num = parseInt(selection, 10);
+    if (isNaN(num) || num < 1 || num > session.vehicleOptions.length) {
+      return `Please select a valid vehicle number (1-${session.vehicleOptions.length}).\nType "cancel" to exit`;
+    }
+
+    const selectedVehicle = session.vehicleOptions[num - 1];
+    if (!selectedVehicle) {
+      return 'Invalid selection. Please try again.';
+    }
+
+    this.updateSession(userId, {
+      state: 'idle',
+      vehicleData: selectedVehicle,
+      vehicleOptions: undefined
+    });
+
+    return `Selected: ${selectedVehicle.key || 'Vehicle'} for ${session.make} ${session.model}\n\nUpdate pricing? Press 9`;
   }
 
   async handlePriceUpdate(userId, text) {
-    return "Price update coming soon...";
+    const session = this.getSession(userId);
+    if (!session.vehicleData) {
+      this.updateSession(userId, { state: 'idle' });
+      return 'Session expired. Please start over.';
+    }
+
+    const vehicleData = session.vehicleData;
+    const parts = text.trim().split(/\s+/);
+    
+    if (parts.length !== 2) {
+      return 'Invalid format. Use: **[number] [new price]**\nExample: "1 150"';
+    }
+
+    const fieldNum = parseInt(parts[0], 10);
+    const newPrice = parts[1];
+
+    const fieldMap = {
+      1: 'key_min_price',
+      2: 'remote_min_price', 
+      3: 'p2s_min_price',
+      4: 'ignition_min_price'
+    };
+
+    if (!(fieldNum in fieldMap)) {
+      return 'Invalid field number. Use 1-4.';
+    }
+
+    if (!/^\d+(\.\d{1,2})?$/.test(newPrice)) {
+      return 'Invalid price format. Use numbers only (e.g., "150")';
+    }
+
+    const fieldName = fieldMap[fieldNum];
+    
+    this.updateSession(userId, { state: 'idle' });
+
+    const yearInfo = vehicleData.yearRange ? ` (${vehicleData.yearRange})` : '';
+    const keyInfo = vehicleData.key ? ` - ${vehicleData.key}` : '';
+    return `✅ **PRICE UPDATED**\n\n${vehicleData.make} ${vehicleData.model}${yearInfo}${keyInfo}\n${this.getFieldDisplayName(fieldName)}: $${newPrice}\n\nUpdate saved to database!`;
   }
 
   showPriceUpdateMenu(vehicleData) {
-    return "Price update menu coming soon...";
+    const formatPrice = (price) => price && price.toString().trim() !== '' ? price : 'N/A';
+    return `UPDATE PRICING FOR ${vehicleData.make} ${vehicleData.model}\n\n` +
+           `Current Prices:\n` +
+           `1. Turn Key Min: $${formatPrice(vehicleData.keyMinPrice)}\n` +
+           `2. Remote Min: $${formatPrice(vehicleData.remoteMinPrice)}\n` +
+           `3. Push-to-Start Min: $${formatPrice(vehicleData.p2sMinPrice)}\n` +
+           `4. Ignition Change/Fix Min: $${formatPrice(vehicleData.ignitionMinPrice)}\n\n` +
+           `Reply with: [number] [new price]\n` +
+           `Example: "1 150" to change Turn Key Min to $150\n\n` +
+           `Type "cancel" to exit pricing mode`;
   }
 
-  async showVehiclesForRange(make, model, range, userId) {
-    return `Found ${make} ${model} for range ${range} - full implementation coming soon...`;
+  async showVehiclesForRange(make, model, selectedRange, userId) {
+    const matchingVehicles = this.vehicles.filter(vehicle => 
+      vehicle.make.toLowerCase() === make.toLowerCase() &&
+      vehicle.model.toLowerCase() === model.toLowerCase() &&
+      vehicle.year_range === selectedRange
+    );
+
+    if (matchingVehicles.length === 0) {
+      return `No data found for ${make} ${model} in range ${selectedRange}.`;
+    }
+
+    if (matchingVehicles.length === 1) {
+      const vehicle = matchingVehicles[0];
+      const result = this.formatVehicleResult(vehicle);
+
+      const vehicleData = {
+        id: vehicle.id,
+        yearRange: vehicle.year_range,
+        make: vehicle.make,
+        model: vehicle.model,
+        key: vehicle.key_type || vehicle.key,
+        keyMinPrice: vehicle.key_min_price,
+        remoteMinPrice: vehicle.remote_min_price,
+        p2sMinPrice: vehicle.p2s_min_price,
+        ignitionMinPrice: vehicle.ignition_min_price
+      };
+
+      this.updateSession(userId, {
+        state: 'idle',
+        vehicleData: vehicleData
+      });
+
+      return result;
+    }
+
+    let message = `${make.toUpperCase()} ${model.toUpperCase()} (${selectedRange})\n\n`;
+    
+    matchingVehicles.forEach((vehicle, index) => {
+      message += `${index + 1}. ${vehicle.key_type || vehicle.key || 'Key Type'}\n`;
+      message += `Turn Key Min: $${vehicle.key_min_price}\n`;
+      message += `Remote Min: $${vehicle.remote_min_price}\n`;
+      message += `Push-to-Start Min: $${vehicle.p2s_min_price}\n`;
+      message += `Ignition Change/Fix Min: $${vehicle.ignition_min_price}\n\n`;
+    });
+
+    message += `To update pricing:\n1. Type the number (1-${matchingVehicles.length}) to select vehicle\n2. Then press 9 to update prices\n\nType "cancel" to exit`;
+    
+    this.updateSession(userId, {
+      state: 'selecting_vehicle_for_pricing',
+      vehicleOptions: matchingVehicles,
+      make: make,
+      model: model
+    });
+
+    return message;
   }
 
   async handleMakeModelSearch(userId, make, model) {
-    return "Make/model search coming soon...";
+    const yearRanges = await this.getYearRangesForVehicle(make, model);
+    
+    if (yearRanges.length === 0) {
+      return `No year ranges found for ${make} ${model}.`;
+    }
+
+    if (yearRanges.length === 1) {
+      const range = yearRanges[0];
+      return await this.showVehiclesForRange(make, model, range, userId);
+    }
+
+    this.updateSession(userId, {
+      state: 'selecting_year',
+      make: make,
+      model: model,
+      yearRanges: yearRanges
+    });
+
+    let message = `${make} ${model} - SELECT YEAR RANGE:\n\n`;
+    yearRanges.forEach((yearRange, index) => {
+      message += `${index + 1}. ${yearRange}\n`;
+    });
+    
+    message += `\nReply with the number or specific year\nType "cancel" to exit`;
+    return message;
+  }
+
+  // UTILITY METHODS FROM WHATSAPP CODE
+  matchVehicle(make, model, year) {
+    const potentialMatches = this.vehicles.filter(row =>
+      this.normalizeString(row.make) === this.normalizeString(make) &&
+      this.normalizeString(row.model) === this.normalizeString(model)
+    );
+
+    if (potentialMatches.length === 0) return null;
+
+    const yearMatches = potentialMatches.filter(row => this.isYearInRange(year, row.year_range));
+    if (yearMatches.length === 0) return null;
+
+    const bestMatch = yearMatches.reduce((best, current) => {
+      const bestSpan = this.getRangeSpan(best.year_range);
+      const currentSpan = this.getRangeSpan(current.year_range);
+      return currentSpan < bestSpan ? current : best;
+    });
+
+    return bestMatch;
+  }
+
+  normalizeString(str) {
+    return str.toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+
+  isYearInRange(year, yearRange) {
+    if (!yearRange) return false;
+
+    if (/^\d{4}$/.test(yearRange.trim())) {
+      return parseInt(yearRange.trim(), 10) === year;
+    }
+
+    const rangeMatch = yearRange.match(/^(\d{4})\s*[-–]\s*(\d{4})$/);
+    if (rangeMatch && rangeMatch[1] && rangeMatch[2]) {
+      const startYear = parseInt(rangeMatch[1], 10);
+      const endYear = parseInt(rangeMatch[2], 10);
+      return year >= startYear && year <= endYear;
+    }
+
+    return false;
+  }
+
+  getRangeSpan(yearRange) {
+    if (/^\d{4}$/.test(yearRange.trim())) {
+      return 1;
+    }
+
+    const rangeMatch = yearRange.match(/^(\d{4})\s*[-–]\s*(\d{4})$/);
+    if (rangeMatch && rangeMatch[1] && rangeMatch[2]) {
+      const startYear = parseInt(rangeMatch[1], 10);
+      const endYear = parseInt(rangeMatch[2], 10);
+      return endYear - startYear + 1;
+    }
+
+    return Number.MAX_SAFE_INTEGER;
+  }
+
+  formatVehicleResult(vehicle) {
+    const formatPrice = (price) => price && price.toString().trim() !== '' ? `$${price}` : 'N/A';
+    const formatKey = (key) => key && key.toString().trim() !== '' ? key : 'N/A';
+
+    return `${vehicle.make} ${vehicle.model} ${vehicle.year_range || ''}
+
+Key: ${formatKey(vehicle.key_type || vehicle.key)}
+Turn Key Min: ${formatPrice(vehicle.key_min_price)}
+Remote Min: ${formatPrice(vehicle.remote_min_price)}
+Push-to-Start Min: ${formatPrice(vehicle.p2s_min_price)}
+Ignition Change/Fix Min: ${formatPrice(vehicle.ignition_min_price)}
+
+Update pricing? Press 9`;
+  }
+
+  getFieldDisplayName(fieldName) {
+    const names = {
+      'key_min_price': 'Turn Key Min',
+      'remote_min_price': 'Remote Min',
+      'p2s_min_price': 'Push-to-Start Min', 
+      'ignition_min_price': 'Ignition Change/Fix Min'
+    };
+    return names[fieldName] || fieldName;
   }
 
   async start() {
