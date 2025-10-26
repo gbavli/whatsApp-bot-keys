@@ -120,6 +120,8 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
   }
 
   async processMessage(text, userId) {
+    console.log(`📨 Processing message: "${text}" from user ${userId}`);
+    
     // Handle exit commands
     if (this.isExitCommand(text)) {
       this.userSessions.delete(userId);
@@ -151,7 +153,10 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
     // Handle model selection
     if (session.state === 'selecting_model') {
       console.log(`🎯 Handling model selection: "${text}"`);
-      return await this.handleModelSelection(userId, text);
+      console.log(`🎯 Session models count: ${session.models?.length || 0}`);
+      const result = await this.handleModelSelection(userId, text);
+      console.log(`🎯 Model selection result: "${result}"`);
+      return result;
     }
 
     // Handle year selection  
@@ -175,15 +180,19 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
 
     switch (parsed.type) {
       case 'make_only':
+        console.log(`🎯 Handling make-only search for: ${parsed.make}`);
         return await this.handleMakeOnlySearch(userId, parsed.make);
       
       case 'make_model':
+        console.log(`🎯 Handling make-model search for: ${parsed.make} ${parsed.model}`);
         return await this.handleMakeModelSearch(userId, parsed.make, parsed.model);
       
       case 'full':
+        console.log(`🎯 Handling full search for: ${parsed.make} ${parsed.model} ${parsed.year}`);
         return await this.handleFullSearch(userId, parsed.make, parsed.model, parsed.year);
     }
 
+    console.log(`❌ No handler matched, returning generic error`);
     return 'No matching record found.';
   }
 
