@@ -12,7 +12,8 @@ class CleanTelegramBot {
     this.vehicles = [];
     this.databaseUrl = null;
     this.isLoading = false;
-    console.log('🤖 Clean Telegram Bot Starting...');
+    this.instanceId = Math.random().toString(36).substr(2, 9);
+    console.log(`🤖 Clean Telegram Bot Starting... [Instance: ${this.instanceId}]`);
   }
 
   async loadVehicles() {
@@ -22,34 +23,55 @@ class CleanTelegramBot {
     const DATABASE_URL = process.env.DATABASE_URL;
     
     if (!DATABASE_URL) {
-      console.log('❌ No DATABASE_URL found');
+      console.log(`❌ [${this.instanceId}] No DATABASE_URL found`);
       this.vehicles = this.getFallbackData();
       this.isLoading = false;
       return;
     }
 
-    try {
-      console.log('🔍 Connecting to PostgreSQL...');
-      const client = new Client({
-        connectionString: DATABASE_URL,
-        ssl: { rejectUnauthorized: false }
-      });
-      
-      await client.connect();
-      console.log('✅ PostgreSQL connected');
-      
-      const result = await client.query('SELECT * FROM vehicles ORDER BY make, model, year_range');
-      this.vehicles = result.rows;
-      await client.end();
-      
-      this.databaseUrl = DATABASE_URL;
-      console.log(`✅ Loaded ${this.vehicles.length} vehicles from PostgreSQL`);
-      
-    } catch (error) {
-      console.error('❌ Database error:', error.message);
-      this.vehicles = this.getFallbackData();
+    let retryCount = 0;
+    const maxRetries = 3;
+
+    while (retryCount < maxRetries) {
+      try {
+        console.log(`🔍 [${this.instanceId}] Connecting to PostgreSQL... (attempt ${retryCount + 1})`);
+        const client = new Client({
+          connectionString: DATABASE_URL,
+          ssl: { rejectUnauthorized: false },
+          connectionTimeoutMillis: 10000,
+          query_timeout: 30000
+        });
+        
+        await client.connect();
+        console.log(`✅ [${this.instanceId}] PostgreSQL connected`);
+        
+        const result = await client.query('SELECT * FROM vehicles ORDER BY make, model, year_range');
+        
+        if (result.rows.length > 100) { // Sanity check
+          this.vehicles = result.rows;
+          this.databaseUrl = DATABASE_URL;
+          console.log(`✅ [${this.instanceId}] Loaded ${this.vehicles.length} vehicles from PostgreSQL`);
+          await client.end();
+          this.isLoading = false;
+          return;
+        } else {
+          console.log(`⚠️ [${this.instanceId}] Got only ${result.rows.length} vehicles, retrying...`);
+          await client.end();
+        }
+        
+      } catch (error) {
+        console.error(`❌ [${this.instanceId}] Database error (attempt ${retryCount + 1}):`, error.message);
+        retryCount++;
+        
+        if (retryCount < maxRetries) {
+          console.log(`🔄 [${this.instanceId}] Retrying in 2 seconds...`);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      }
     }
-    
+
+    console.log(`⚠️ [${this.instanceId}] All database attempts failed, using fallback data`);
+    this.vehicles = this.getFallbackData();
     this.isLoading = false;
   }
 
@@ -90,9 +112,9 @@ class CleanTelegramBot {
         chat_id: chatId,
         text: text
       });
-      console.log(`✅ Sent to ${chatId}`);
+      console.log(`✅ [${this.instanceId}] Sent to ${chatId}: "${text.substring(0, 30)}..."`);
     } catch (error) {
-      console.error('❌ Send error:', error.message);
+      console.error(`❌ [${this.instanceId}] Send error:`, error.message);
     }
   }
 
@@ -264,6 +286,12 @@ Try: toyota, honda, chevrolet`);
   }
 
   async getModelsForMake(make) {
+    // If we have very few vehicles, try to reload database
+    if (this.vehicles.length < 100) {
+      console.log(`⚠️ Only ${this.vehicles.length} vehicles, reloading database...`);
+      await this.loadVehicles();
+    }
+    
     const models = new Set();
     
     this.vehicles.forEach(vehicle => {
@@ -272,7 +300,10 @@ Try: toyota, honda, chevrolet`);
       }
     });
 
-    return Array.from(models).sort();
+    const modelList = Array.from(models).sort();
+    console.log(`🎯 Found ${modelList.length} models for ${make} (total vehicles: ${this.vehicles.length})`);
+    
+    return modelList;
   }
 
   async getYearRangesForVehicle(make, model) {
