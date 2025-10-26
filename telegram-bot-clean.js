@@ -143,6 +143,31 @@ Try: toyota, honda, chevrolet`);
       return;
     }
 
+    if (text === '/debug') {
+      const dbStatus = this.databaseUrl ? 'Connected' : 'Using fallback';
+      const dbPreview = process.env.DATABASE_URL ? 
+        process.env.DATABASE_URL.substring(0, 30) + '...' : 'Not set';
+      
+      await this.sendMessage(chatId, `🔧 Debug Info:
+
+📊 Vehicles: ${this.vehicles.length}
+🗄️ Database: ${dbStatus}
+🔗 DB URL: ${dbPreview}
+🌐 Environment: ${process.env.NODE_ENV || 'not set'}
+🤖 Instance: ${this.instanceId}
+
+Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join(', ')}`);
+      return;
+    }
+
+    if (text === '/reload') {
+      await this.sendMessage(chatId, '🔄 Reloading database...');
+      this.isLoading = false; // Reset loading flag
+      await this.loadVehicles();
+      await this.sendMessage(chatId, `✅ Database reloaded: ${this.vehicles.length} vehicles`);
+      return;
+    }
+
     // Process the message using WhatsApp logic
     const response = await this.processMessage(userId, text.toLowerCase());
     if (response) {
