@@ -3,6 +3,7 @@ command = "npm install"
 
 [deploy]
 startCommand = "node telegram-bot-clean.js"
+replicas = 1
 
 [env]
 NODE_ENV = "production"
