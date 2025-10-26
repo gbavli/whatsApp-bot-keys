@@ -137,6 +137,8 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
     let session = this.userSessions.get(userId) || { state: 'idle' };
     console.log(`🎯 Session state for ${userId}: ${session.state}`);
     console.log(`🎯 Has vehicleData: ${!!session.vehicleData}`);
+    console.log(`🎯 Session make: ${session.make || 'none'}`);
+    console.log(`🎯 Session models count: ${session.models?.length || 0}`);
 
     // Handle price update trigger (9) - CHECK THIS FIRST before session states
     if (text === '9' && session.vehicleData) {
@@ -707,7 +709,14 @@ update pricing ? press 9`;
   }
 
   updateSession(userId, updates) {
-    const session = this.getSession(userId);
+    let session = this.userSessions.get(userId);
+    if (!session) {
+      session = {
+        userId,
+        state: 'idle',
+        lastActivity: new Date()
+      };
+    }
     Object.assign(session, updates);
     session.lastActivity = new Date();
     this.userSessions.set(userId, session);
