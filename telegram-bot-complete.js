@@ -481,7 +481,16 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
   }
 
   async getModelsForMake(make) {
+    // If we only have sample data, try to reload from database
+    if (this.vehicles.length <= 10) {
+      console.log(`⚠️ Only ${this.vehicles.length} vehicles loaded, attempting to reload from database...`);
+      await this.loadVehicles();
+    }
+    
     const models = new Set();
+    
+    console.log(`🔍 Total vehicles in database: ${this.vehicles.length}`);
+    console.log(`🔍 Database URL exists: ${!!this.databaseUrl}`);
     
     this.vehicles.forEach(vehicle => {
       if (vehicle.make.toLowerCase() === make.toLowerCase()) {
