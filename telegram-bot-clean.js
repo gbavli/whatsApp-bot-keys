@@ -12,6 +12,8 @@ class CleanTelegramBot {
     this.vehicles = [];
     this.databaseUrl = null;
     this.isLoading = false;
+    this.dbRetries = 0;
+    this.maxRetries = 5;
     this.instanceId = Math.random().toString(36).substr(2, 9);
     console.log(`🤖 Clean Telegram Bot Starting... [Instance: ${this.instanceId}]`);
   }
@@ -336,6 +338,14 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
   }
 
   async getModelsForMake(make) {
+    // Auto-retry database loading if we have too few vehicles
+    if (this.vehicles.length < 100 && this.dbRetries < this.maxRetries) {
+      console.log(`⚠️ [${this.instanceId}] Only ${this.vehicles.length} vehicles, auto-retrying database (attempt ${this.dbRetries + 1}/${this.maxRetries})...`);
+      this.dbRetries++;
+      this.isLoading = false;
+      await this.loadVehicles();
+    }
+    
     const models = new Set();
     
     console.log(`🔍 [${this.instanceId}] Getting models for ${make} from ${this.vehicles.length} total vehicles`);
