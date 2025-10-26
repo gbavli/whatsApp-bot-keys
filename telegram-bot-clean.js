@@ -22,6 +22,9 @@ class CleanTelegramBot {
 
     const DATABASE_URL = process.env.DATABASE_URL;
     
+    console.log(`🔍 [${this.instanceId}] DATABASE_URL exists: ${!!DATABASE_URL}`);
+    console.log(`🔍 [${this.instanceId}] DATABASE_URL preview: ${DATABASE_URL ? DATABASE_URL.substring(0, 20) + '...' : 'undefined'}`);
+    
     if (!DATABASE_URL) {
       console.log(`❌ [${this.instanceId}] No DATABASE_URL found`);
       this.vehicles = this.getFallbackData();
@@ -61,6 +64,8 @@ class CleanTelegramBot {
         
       } catch (error) {
         console.error(`❌ [${this.instanceId}] Database error (attempt ${retryCount + 1}):`, error.message);
+        console.error(`❌ [${this.instanceId}] Error code:`, error.code);
+        console.error(`❌ [${this.instanceId}] Full error:`, error);
         retryCount++;
         
         if (retryCount < maxRetries) {
@@ -408,10 +413,16 @@ Try: toyota, honda, chevrolet`);
   }
 
   async start() {
+    console.log(`🚀 [${this.instanceId}] Starting bot...`);
+    console.log(`🔍 [${this.instanceId}] Environment check:`);
+    console.log(`  NODE_ENV: ${process.env.NODE_ENV}`);
+    console.log(`  DATABASE_URL exists: ${!!process.env.DATABASE_URL}`);
+    console.log(`  BOT_TOKEN exists: ${!!process.env.BOT_TOKEN}`);
+    
     await this.loadVehicles();
     
-    console.log('🚀 Clean bot started!');
-    console.log(`📊 ${this.vehicles.length} vehicles available`);
+    console.log(`🚀 [${this.instanceId}] Clean bot started!`);
+    console.log(`📊 [${this.instanceId}] ${this.vehicles.length} vehicles available`);
     
     while (true) {
       try {
