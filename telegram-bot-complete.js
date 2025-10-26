@@ -97,7 +97,7 @@ class CompleteTelegramBot {
     }
 
     // Set processing lock
-    this.processingLocks.set(userId, true);
+    this.processingLocks.set(userId, Date.now());
 
     try {
       if (text === '/start') {
@@ -137,6 +137,8 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
 
   async processMessage(text, userId) {
     console.log(`📨 Processing message: "${text}" from user ${userId}`);
+    console.log(`📊 Total active sessions: ${this.userSessions.size}`);
+    console.log(`📊 All active user IDs: [${Array.from(this.userSessions.keys()).join(', ')}]`);
     
     // Handle exit commands
     if (this.isExitCommand(text)) {
@@ -172,8 +174,10 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
     if (session.state === 'selecting_model') {
       console.log(`🎯 Handling model selection: "${text}"`);
       console.log(`🎯 Session models count: ${session.models?.length || 0}`);
+      console.log(`🎯 About to call handleModelSelection...`);
       const result = await this.handleModelSelection(userId, text);
       console.log(`🎯 Model selection result: "${result}"`);
+      console.log(`🎯 Returning from model selection handler`);
       return result;
     }
 
@@ -301,6 +305,9 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
 
   async handleModelSelection(userId, selection) {
     const session = this.userSessions.get(userId);
+    console.log(`🔍 handleModelSelection called with userId: ${userId}, selection: "${selection}"`);
+    console.log(`🔍 Current session:`, JSON.stringify(session, null, 2));
+    
     if (!session || !session.models || !session.make) {
       console.log(`❌ Model selection: No valid session found for ${userId}`);
       console.log(`❌ Session data:`, session);
