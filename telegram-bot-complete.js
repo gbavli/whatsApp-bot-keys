@@ -222,6 +222,7 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
       
       case 'full':
         console.log(`🎯 Handling full search for: ${parsed.make} ${parsed.model} ${parsed.year}`);
+        console.log(`🔍 Database has ${this.vehicles.length} vehicles loaded`);
         return await this.handleFullSearch(userId, parsed.make, parsed.model, parsed.year);
     }
 
@@ -283,7 +284,9 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
   }
 
   async handleFullSearch(userId, make, model, year) {
+    console.log(`🔎 Searching for: make="${make}", model="${model}", year=${year}`);
     const result = this.matchVehicle(make, model, year);
+    console.log(`📊 Match result:`, result ? 'FOUND' : 'NOT FOUND');
     
     if (result) {
       // Store the result for potential price updates
@@ -663,10 +666,12 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
   }
 
   matchVehicle(make, model, year) {
+    console.log(`🔍 matchVehicle: Searching ${this.vehicles.length} vehicles for ${make}/${model}/${year}`);
     const potentialMatches = this.vehicles.filter(row =>
       this.normalizeString(row.make) === this.normalizeString(make) &&
       this.normalizeString(row.model) === this.normalizeString(model)
     );
+    console.log(`🔍 Found ${potentialMatches.length} potential matches for make/model`);
 
     if (potentialMatches.length === 0) return null;
 
