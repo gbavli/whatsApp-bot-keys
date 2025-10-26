@@ -12,6 +12,7 @@ class CompleteTelegramBot {
     this.vehicles = [];
     this.databaseUrl = null;
     this.isLoading = false;
+    this.processingLocks = new Map(); // Prevent concurrent processing per user
     console.log('🤖 Complete Telegram Bot Starting...');
   }
 
@@ -83,13 +84,24 @@ class CompleteTelegramBot {
     const chatId = message.chat.id;
     const text = message.text?.trim();
     const username = message.from?.username || message.from?.first_name || 'User';
+    const userId = chatId.toString();
     
     console.log(`📩 @${username}: "${text}"`);
     
     if (!text) return;
 
-    if (text === '/start') {
-      await this.sendMessage(chatId, `🤖 Vehicle Key Pricing Bot
+    // Check if already processing a message for this user
+    if (this.processingLocks.get(userId)) {
+      console.log(`⏳ Already processing message for user ${userId}, skipping...`);
+      return;
+    }
+
+    // Set processing lock
+    this.processingLocks.set(userId, true);
+
+    try {
+      if (text === '/start') {
+        await this.sendMessage(chatId, `🤖 Vehicle Key Pricing Bot
 
 📊 Database: ${this.vehicles.length} vehicles loaded
 🔍 Search examples:
@@ -98,24 +110,28 @@ class CompleteTelegramBot {
 • Toyota Corolla 2022 (get pricing)
 
 Try: toyota, honda, chevrolet`);
-      return;
-    }
+        return;
+      }
 
-    if (text === '/debug') {
-      await this.sendMessage(chatId, `🔧 Bot Debug:
-      
+      if (text === '/debug') {
+        await this.sendMessage(chatId, `🔧 Bot Debug:
+        
 📊 Vehicles: ${this.vehicles.length}
 🗄️ Database: ${this.databaseUrl ? 'Connected' : 'Sample data'}
 💾 Sessions: ${this.userSessions.size} active
 
 Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join(', ')}`);
-      return;
-    }
+        return;
+      }
 
-    // Process the message
-    const response = await this.processMessage(text.toLowerCase(), chatId.toString());
-    if (response) {
-      await this.sendMessage(chatId, response);
+      // Process the message
+      const response = await this.processMessage(text.toLowerCase(), userId);
+      if (response) {
+        await this.sendMessage(chatId, response);
+      }
+    } finally {
+      // Always clear processing lock
+      this.processingLocks.delete(userId);
     }
   }
 
@@ -205,7 +221,8 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
       return `No models found for ${make}.`;
     }
 
-    // Store session for model selection
+    // Clear any existing session data and create fresh session
+    this.userSessions.delete(userId);
     this.updateSession(userId, {
       state: 'selecting_model',
       make: make,
