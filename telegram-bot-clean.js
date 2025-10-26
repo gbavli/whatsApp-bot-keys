@@ -610,7 +610,6 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
 
     if (matchingVehicles.length === 1) {
       const vehicle = matchingVehicles[0];
-      const result = this.formatVehicleResult(vehicle);
 
       const vehicleData = {
         id: vehicle.id,
@@ -629,7 +628,7 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
         vehicleData: vehicleData
       });
 
-      return result;
+      return this.formatVehicleResult(vehicle);
     }
 
     let message = `${make.toUpperCase()} ${model.toUpperCase()} (${selectedRange})\n\n`;
@@ -684,14 +683,17 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
 
   // UTILITY METHODS FROM WHATSAPP CODE
   matchVehicle(make, model, year) {
+    console.log(`🔍 [${this.instanceId}] matchVehicle: ${make} ${model} ${year}`);
     const potentialMatches = this.vehicles.filter(row =>
       this.normalizeString(row.make) === this.normalizeString(make) &&
       this.normalizeString(row.model) === this.normalizeString(model)
     );
+    console.log(`🎯 [${this.instanceId}] Found ${potentialMatches.length} potential matches for ${make} ${model}`);
 
     if (potentialMatches.length === 0) return null;
 
     const yearMatches = potentialMatches.filter(row => this.isYearInRange(year, row.year_range));
+    console.log(`📅 [${this.instanceId}] Found ${yearMatches.length} year matches for ${year}`);
     if (yearMatches.length === 0) return null;
 
     const bestMatch = yearMatches.reduce((best, current) => {
@@ -700,6 +702,7 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
       return currentSpan < bestSpan ? current : best;
     });
 
+    console.log(`✅ [${this.instanceId}] Best match: ${bestMatch.make} ${bestMatch.model} ${bestMatch.year_range}`);
     return bestMatch;
   }
 
