@@ -168,6 +168,20 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
       return;
     }
 
+    if (text === '/sample') {
+      const sample = this.vehicles.slice(0, 3);
+      const sampleText = sample.map(v => 
+        `${v.make || 'NO_MAKE'} ${v.model || 'NO_MODEL'} (${Object.keys(v).join(', ')})`
+      ).join('\n');
+      
+      const hondaCount = this.vehicles.filter(v => 
+        v.make && v.make.toLowerCase() === 'honda'
+      ).length;
+      
+      await this.sendMessage(chatId, `🔍 Sample vehicles:\n${sampleText}\n\nHonda vehicles: ${hondaCount}`);
+      return;
+    }
+
     // Process the message using WhatsApp logic
     const response = await this.processMessage(userId, text.toLowerCase());
     if (response) {
@@ -331,7 +345,13 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
     });
 
     const modelList = Array.from(models).sort();
-    console.log(`🎯 Found ${modelList.length} models for ${make} (total vehicles: ${this.vehicles.length})`);
+    console.log(`🎯 [${this.instanceId}] Found ${modelList.length} models for ${make} (total vehicles: ${this.vehicles.length})`);
+    
+    // Debug: Show first few Honda records
+    if (make.toLowerCase() === 'honda') {
+      const hondaVehicles = this.vehicles.filter(v => v.make.toLowerCase() === 'honda');
+      console.log(`🔍 [${this.instanceId}] Sample Honda vehicles:`, hondaVehicles.slice(0, 5).map(v => `${v.make} ${v.model}`));
+    }
     
     return modelList;
   }
