@@ -783,10 +783,27 @@ Update pricing? Press 9`;
     console.log(`  DATABASE_URL exists: ${!!process.env.DATABASE_URL}`);
     console.log(`  BOT_TOKEN exists: ${!!process.env.BOT_TOKEN}`);
     
-    await this.loadVehicles();
+    // KEEP TRYING UNTIL WE GET THE FULL DATABASE
+    let attempts = 0;
+    while (this.vehicles.length < 1000 && attempts < 10) {
+      attempts++;
+      console.log(`💪 [${this.instanceId}] FORCING database load attempt ${attempts}...`);
+      this.isLoading = false;
+      await this.loadVehicles();
+      
+      if (this.vehicles.length < 1000) {
+        console.log(`⏳ [${this.instanceId}] Only got ${this.vehicles.length} vehicles, retrying in 3 seconds...`);
+        await new Promise(resolve => setTimeout(resolve, 3000));
+      }
+    }
     
-    console.log(`🚀 [${this.instanceId}] Clean bot started!`);
-    console.log(`📊 [${this.instanceId}] ${this.vehicles.length} vehicles available`);
+    if (this.vehicles.length < 1000) {
+      console.log(`❌ [${this.instanceId}] FAILED to load database after ${attempts} attempts - FORCING RESTART`);
+      process.exit(1); // Force Railway to restart until it works
+    }
+    
+    console.log(`🚀 [${this.instanceId}] Bot started with ${this.vehicles.length} vehicles!`);
+    console.log(`✅ [${this.instanceId}] DATABASE IS SOLID!`);
     
     while (true) {
       try {
