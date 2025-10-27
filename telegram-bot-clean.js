@@ -586,11 +586,25 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
 
     const fieldName = fieldMap[fieldNum];
     
-    this.updateSession(userId, { state: 'idle' });
-
-    const yearInfo = vehicleData.yearRange ? ` (${vehicleData.yearRange})` : '';
-    const keyInfo = vehicleData.key ? ` - ${vehicleData.key}` : '';
-    return `✅ **PRICE UPDATED**\n\n${vehicleData.make} ${vehicleData.model}${yearInfo}${keyInfo}\n${this.getFieldDisplayName(fieldName)}: $${newPrice}\n\nUpdate saved to database!`;
+    // ACTUAL DATABASE UPDATE
+    if (vehicleData.id && this.databaseUrl) {
+      console.log(`🔧 [${this.instanceId}] Attempting database update for vehicle ${vehicleData.id}`);
+      const updateSuccess = await this.updateVehicleInDatabase(vehicleData.id, fieldName, newPrice, userId);
+      
+      this.updateSession(userId, { state: 'idle' });
+      
+      if (updateSuccess) {
+        const yearInfo = vehicleData.yearRange ? ` (${vehicleData.yearRange})` : '';
+        const keyInfo = vehicleData.key ? ` - ${vehicleData.key}` : '';
+        return `✅ **PRICE UPDATED**\n\n${vehicleData.make} ${vehicleData.model}${yearInfo}${keyInfo}\n${this.getFieldDisplayName(fieldName)}: $${newPrice}\n\nUpdate saved to database!`;
+      } else {
+        return `❌ **UPDATE FAILED**\n\nCould not save to database. Please try again.`;
+      }
+    } else {
+      console.log(`⚠️ [${this.instanceId}] Missing vehicle ID (${vehicleData.id}) or database URL (${!!this.databaseUrl})`);
+      this.updateSession(userId, { state: 'idle' });
+      return `⚠️ **SIMULATION MODE**\n\nPrice update simulated (no database connection)\n${this.getFieldDisplayName(fieldName)}: $${newPrice}`;
+    }
   }
 
   showPriceUpdateMenu(vehicleData) {
@@ -774,6 +788,69 @@ Update pricing? Press 9`;
       'ignition_min_price': 'Ignition Change/Fix Min'
     };
     return names[fieldName] || fieldName;
+  }
+
+  // REAL DATABASE UPDATE FUNCTION
+  async updateVehicleInDatabase(vehicleId, field, newPrice, userId) {
+    if (!this.databaseUrl) {
+      console.log(`❌ [${this.instanceId}] No database URL for price update`);
+      return false;
+    }
+
+    try {
+      console.log(`🔧 [${this.instanceId}] Updating vehicle ${vehicleId} ${field} to ${newPrice}`);
+      
+      const client = new Client({
+        connectionString: this.databaseUrl,
+        ssl: { rejectUnauthorized: false },
+        connectionTimeoutMillis: 10000,
+        query_timeout: 30000
+      });
+      
+      await client.connect();
+      console.log(`✅ [${this.instanceId}] Connected for price update`);
+
+      // Get current price for audit log
+      const currentResult = await client.query(
+        `SELECT ${field} FROM vehicles WHERE id = $1`,
+        [vehicleId]
+      );
+      
+      const oldPrice = currentResult.rows[0]?.[field] || '';
+      console.log(`📊 [${this.instanceId}] Current ${field}: ${oldPrice} -> ${newPrice}`);
+
+      // Update the price
+      await client.query(
+        `UPDATE vehicles SET ${field} = $1 WHERE id = $2`,
+        [newPrice, vehicleId]
+      );
+      console.log(`✅ [${this.instanceId}] Price updated in database`);
+
+      // Try to log to audit table (optional, won't fail if table doesn't exist)
+      try {
+        await client.query(`
+          INSERT INTO price_updates (vehicle_id, user_id, field_changed, old_value, new_value)
+          VALUES ($1, $2, $3, $4, $5)
+        `, [vehicleId, userId, field, oldPrice, newPrice]);
+        console.log(`📝 [${this.instanceId}] Audit log created`);
+      } catch (auditError) {
+        console.log(`⚠️ [${this.instanceId}] Could not create audit log (table may not exist):`, auditError.message);
+        // Don't fail the update if audit logging fails
+      }
+
+      await client.end();
+      console.log(`✅ [${this.instanceId}] Database update completed successfully`);
+      
+      // Force reload of vehicle data to get updated prices
+      this.isLoading = false;
+      await this.loadVehicles();
+      
+      return true;
+
+    } catch (error) {
+      console.error(`❌ [${this.instanceId}] Database update failed:`, error.message);
+      return false;
+    }
   }
 
   async start() {
