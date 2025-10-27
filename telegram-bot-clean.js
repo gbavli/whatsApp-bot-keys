@@ -340,12 +340,19 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
   }
 
   async getModelsForMake(make) {
-    // Auto-retry database loading if we have too few vehicles
-    if (this.vehicles.length < 100 && this.dbRetries < this.maxRetries) {
-      console.log(`⚠️ [${this.instanceId}] Only ${this.vehicles.length} vehicles, auto-retrying database (attempt ${this.dbRetries + 1}/${this.maxRetries})...`);
-      this.dbRetries++;
+    // AGGRESSIVE auto-retry database loading if we have too few vehicles
+    if (this.vehicles.length < 100) {
+      console.log(`⚠️ [${this.instanceId}] Only ${this.vehicles.length} vehicles, FORCING database reload...`);
       this.isLoading = false;
+      this.dbRetries = 0; // Reset retries
       await this.loadVehicles();
+      
+      // If still failed, try one more time immediately
+      if (this.vehicles.length < 100) {
+        console.log(`🔄 [${this.instanceId}] Second attempt at database reload...`);
+        this.isLoading = false;
+        await this.loadVehicles();
+      }
     }
     
     const models = new Set();
