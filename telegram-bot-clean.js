@@ -225,6 +225,8 @@ Available makes: ${[...new Set(this.vehicles.map(v => v.make))].slice(0, 5).join
 
     // Handle year selection  
     if (session.state === 'selecting_year') {
+      console.log(`🎯 [${this.instanceId}] Handling year selection: "${trimmedText}" for user ${userId}`);
+      console.log(`🎯 [${this.instanceId}] Session data:`, session);
       return await this.handleYearSelection(userId, trimmedText);
     }
 
